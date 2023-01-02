@@ -1,0 +1,3 @@
+var s = "I'm a 
+         multiline 
+         string";

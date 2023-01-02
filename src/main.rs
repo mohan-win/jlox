@@ -6,7 +6,7 @@ use std::{env, io};
 
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().collect();
-    if args.len() > 1 {
+    if args.len() > 2 {
         eprintln!("Usage: jlox [script]");
         ExitCode::from(ExitCode::FAILURE)
     } else if args.len() == 2 {
