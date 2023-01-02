@@ -1,5 +1,5 @@
 use std::fmt::Display;
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TokenType {
     // Single charactor token
     LEFT_PARAN,

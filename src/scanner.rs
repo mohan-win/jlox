@@ -1,4 +1,5 @@
-use std::rc::Rc;
+use core::str;
+use std::{collections::HashMap, rc::Rc};
 
 use crate::{
     error::error,
@@ -13,29 +14,26 @@ struct ScanPosition {
 }
 
 pub struct Scanner {
-    source: String,
-    source_graphemes: Vec<String>, // ToDo:: replace it with Vec<&str> to save memory ??
+    source_graphemes: Vec<String>,
     pos: ScanPosition,
     tokens: Vec<Token>,
+    keywords: HashMap<&'static str, TokenType>,
 }
 
-impl<'a> Scanner {
+impl Scanner {
     pub fn new(source: String) -> Scanner {
-        let source = source;
-        let source_graphemes: Vec<String> = source
-            .clone()
-            .graphemes(true)
-            .map(|str| String::from(str))
-            .collect();
         Scanner {
-            source,
-            source_graphemes,
+            source_graphemes: source
+                .graphemes(true)
+                .map(|str| String::from(str))
+                .collect(),
             pos: ScanPosition {
                 start: 0,
                 current: 0,
                 line: 1,
             },
             tokens: Vec::new(),
+            keywords: KEYWORDS(),
         }
     }
 
@@ -110,7 +108,14 @@ impl<'a> Scanner {
             "\n" => self.pos.line += 1,
             "\"" => self.string_litral(),
 
-            c => error(self.pos.line, &format!("Unexpected charactor {}", c)),
+            c => {
+                if Self::is_digit(c) {
+                    self.number();
+                } else if Self::is_alpha(c) {
+                    self.identifier();
+                }
+                error(self.pos.line, &format!("Unexpected charactor {}", c));
+            }
         }
     }
 
@@ -123,8 +128,7 @@ impl<'a> Scanner {
     fn advance_if_matched(&mut self, expected: &str) -> bool {
         if self.is_at_end() {
             return false;
-        }
-        if &self.source_graphemes[self.pos.current] != expected {
+        } else if self.source_graphemes[self.pos.current] != expected {
             return false;
         } else {
             self.pos.current += 1;
@@ -140,10 +144,18 @@ impl<'a> Scanner {
         }
     }
 
+    fn peek_next(&self) -> &str {
+        if self.pos.current + 1 >= self.source_graphemes.len() {
+            "\0"
+        } else {
+            &self.source_graphemes[self.pos.current + 1]
+        }
+    }
+
     fn add_token(&mut self, token_type: TokenType) {
-        let text = &self.source_graphemes[self.pos.start..self.pos.current].join("");
+        let text = self.source_graphemes[self.pos.start..self.pos.current].join("");
         self.tokens
-            .push(Token::new(token_type, text.clone(), self.pos.line))
+            .push(Token::new(token_type, text, self.pos.line))
     }
 
     fn string_litral(&mut self) {
@@ -163,4 +175,80 @@ impl<'a> Scanner {
         let value = self.source_graphemes[self.pos.start + 1..self.pos.current].join("");
         self.add_token(TokenType::STRING { litral: value })
     }
+
+    fn number(&mut self) {
+        while Self::is_digit(self.peek()) {
+            self.advance();
+        }
+
+        if self.peek() == "." && Self::is_digit(self.peek_next()) {
+            self.advance(); // consume "."
+            while Self::is_digit(self.peek()) {
+                self.advance();
+            }
+        }
+
+        let num_str = self.source_graphemes[self.pos.start..self.pos.current].join("");
+        let value: f64 = str::parse(&num_str).expect("This should be a valid number");
+        self.add_token(TokenType::NUMBER { litral: value })
+    }
+
+    fn identifier(&mut self) {
+        while Self::is_alpha_numeric(self.peek()) {
+            self.advance();
+        }
+
+        let text = self.source_graphemes[self.pos.start..self.pos.current].join("");
+        match self.keywords.get(text.as_str()) {
+            Some(token_type) => self.add_token(token_type.clone()),
+            None => self.add_token(TokenType::IDENTIFIER),
+        }
+    }
+
+    fn is_digit(c: &str) -> bool {
+        match c {
+            "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" => true,
+            _ => false,
+        }
+    }
+
+    fn is_alpha(c: &str) -> bool {
+        match c {
+            "_" => true,
+            "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m" | "n"
+            | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z" | "A" | "B"
+            | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N" | "O" | "P"
+            | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z" => true,
+            _ => false,
+        }
+    }
+
+    fn is_alpha_numeric(c: &str) -> bool {
+        Self::is_alpha(c) || Self::is_digit(c)
+    }
+}
+
+#[allow(non_snake_case)]
+fn KEYWORDS() -> HashMap<&'static str, TokenType> {
+    let keywords: HashMap<&'static str, TokenType> = [
+        ("and", TokenType::AND),
+        ("class", TokenType::CLASS),
+        ("else", TokenType::ELSE),
+        ("false", TokenType::FALSE),
+        ("for", TokenType::FOR),
+        ("fun", TokenType::FUN),
+        ("if", TokenType::IF),
+        ("nil", TokenType::NIL),
+        ("or", TokenType::OR),
+        ("print", TokenType::PRINT),
+        ("return", TokenType::RETURN),
+        ("super", TokenType::SUPER),
+        ("this", TokenType::THIS),
+        ("true", TokenType::TRUE),
+        ("var", TokenType::VAR),
+        ("while", TokenType::WHILE),
+    ]
+    .into_iter()
+    .collect();
+    keywords
 }
