@@ -199,10 +199,11 @@ impl Scanner {
         }
 
         let text = self.source_graphemes[self.pos.start..self.pos.current].join("");
-        match self.keywords.get(text.as_str()) {
-            Some(token_type) => self.add_token(token_type.clone()),
-            None => self.add_token(TokenType::IDENTIFIER),
-        }
+        let token = match self.keywords.get(text.as_str()) {
+            Some(token_type) => token_type.clone(),
+            None => TokenType::IDENTIFIER,
+        };
+        self.add_token(token);
     }
 
     fn is_digit(c: &str) -> bool {
