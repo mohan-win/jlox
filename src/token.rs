@@ -1,5 +1,6 @@
 use std::fmt::Display;
 #[derive(Debug, Clone)]
+#[allow(non_camel_case_types)]
 pub enum TokenType {
     // Single charactor token
     LEFT_PARAN,

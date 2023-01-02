@@ -1,5 +1,5 @@
 use core::str;
-use std::{collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
 use crate::{
     error::error,
@@ -37,11 +37,14 @@ impl Scanner {
         }
     }
 
-    pub fn scan_tokens(&mut self) {
+    pub fn scan_tokens(&mut self) -> &Vec<Token> {
         while !self.is_at_end() {
             self.pos.start = self.pos.current;
             self.scan_token()
         }
+
+        self.add_token(TokenType::EOF);
+        &self.tokens
     }
 
     fn is_at_end(&self) -> bool {
