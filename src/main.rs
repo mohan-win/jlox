@@ -1,17 +1,15 @@
 use jlox::scanner::Scanner;
 use std::fs::File;
-use std::io::{stdin, Read};
+use std::io::{stdin, stdout, Read, Write};
 use std::process::ExitCode;
 use std::{env, io};
 
 fn main() -> ExitCode {
-    let s = "Some (\"word\")";
-    println!("{s}");
     let args: Vec<String> = env::args().collect();
     if args.len() > 1 {
         eprintln!("Usage: jlox [script]");
         ExitCode::from(ExitCode::FAILURE)
-    } else if args.len() == 1 {
+    } else if args.len() == 2 {
         match run_file(&args[1]) {
             Err(err) => {
                 eprintln!("Erred out {:?}", err);
@@ -41,7 +39,8 @@ fn run_file(file_path: &String) -> io::Result<()> {
 
 fn run_prompt() -> io::Result<()> {
     loop {
-        println!("> ");
+        print!("> ");
+        stdout().flush()?;
 
         let mut line = String::new();
         stdin().read_line(&mut line)?;

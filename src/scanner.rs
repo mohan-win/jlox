@@ -105,9 +105,7 @@ impl Scanner {
                     self.add_token(TokenType::SLASH)
                 }
             }
-            " " | "\r" | "\t" => {
-                println!("Ignoring whitespaces")
-            }
+            " " | "\r" | "\t" => (), // Ignoring whitespaces.
             "\n" => self.pos.line += 1,
             "\"" => self.string_litral(),
 
@@ -116,8 +114,9 @@ impl Scanner {
                     self.number();
                 } else if Self::is_alpha(c) {
                     self.identifier();
+                } else {
+                    error(self.pos.line, &format!("Unexpected charactor {}", c));
                 }
-                error(self.pos.line, &format!("Unexpected charactor {}", c));
             }
         }
     }

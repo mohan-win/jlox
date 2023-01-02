@@ -70,9 +70,13 @@ impl Token {
 impl Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.token_type {
-            TokenType::STRING { litral } => write!(f, "{:?} {}", self.token_type, litral),
-            TokenType::NUMBER { litral } => write!(f, "{:?} {}", self.token_type, litral),
-            _ => write!(f, "{:?}", self.token_type),
+            TokenType::STRING { litral } => {
+                write!(f, "{:?} {}", self.token_type, litral)
+            }
+            TokenType::NUMBER { litral } => {
+                write!(f, "{:?} {}", self.token_type, litral)
+            }
+            _ => write!(f, "{:?} \"{}\" ", self.token_type, self.lexeme),
         }
     }
 }
