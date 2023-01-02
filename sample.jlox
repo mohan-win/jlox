@@ -1,3 +1,12 @@
 var s = "I'm a 
          multiline 
          string";
+class Breakfast {
+  cook() {
+    /*print /*"Idly is being cooked"*/*/;
+  }
+
+  serve(who) {
+    pring "Enjoy your breakfast" + who + ".";
+  }
+}

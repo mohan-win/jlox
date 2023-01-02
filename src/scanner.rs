@@ -97,13 +97,7 @@ impl Scanner {
                 self.add_token(token)
             }
             "/" => {
-                if self.advance_if_matched("/") {
-                    while self.peek() != "\n" && !self.is_at_end() {
-                        self.advance();
-                    }
-                } else {
-                    self.add_token(TokenType::SLASH)
-                }
+                self.handle_slash();
             }
             " " | "\r" | "\t" => (), // Ignoring whitespaces.
             "\n" => self.pos.line += 1,
@@ -158,6 +152,45 @@ impl Scanner {
         let text = self.source_graphemes[self.pos.start..self.pos.current].join("");
         self.tokens
             .push(Token::new(token_type, text, self.pos.line))
+    }
+
+    fn handle_slash(&mut self) {
+        if self.advance_if_matched("/") {
+            // single line comment
+            while self.peek() != "\n" && !self.is_at_end() {
+                self.advance();
+            }
+        } else if self.advance_if_matched("*") {
+            // C-style multi line comment
+            let mut comment_terminated = false;
+            while !self.is_at_end() {
+                match self.peek() {
+                    "\n" => {
+                        self.pos.line += 1;
+                        self.advance();
+                    }
+                    "*" => {
+                        if self.peek_next() != "/" {
+                            self.advance();
+                        } else {
+                            // Advance twice to consume end of comment indication (*/)
+                            self.advance();
+                            self.advance();
+                            comment_terminated = true;
+                            break;
+                        }
+                    }
+                    _ => {
+                        self.advance();
+                    }
+                }
+            }
+            if !comment_terminated {
+                error(self.pos.line, "Multi-line comment did't terminate!.");
+            }
+        } else {
+            self.add_token(TokenType::SLASH)
+        }
     }
 
     fn string_litral(&mut self) {
