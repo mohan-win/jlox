@@ -73,23 +73,7 @@ impl<'a> Parser<'a> {
     }
 
     fn expression(&mut self) -> ParserBoxdResult<Expr> {
-        self.block()
-    }
-
-    fn block(&mut self) -> ParserBoxdResult<Expr> {
-        let mut expr = self.equality()?;
-
-        while self.matches(&[TokenType::COMMA]) {
-            let operator = self.previous().clone();
-            let right = self.equality()?;
-            expr = Box::new(Expr::Binary {
-                left: expr,
-                operator,
-                right,
-            })
-        }
-
-        Ok(expr)
+        self.equality()
     }
 
     fn equality(&mut self) -> ParserBoxdResult<Expr> {
