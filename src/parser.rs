@@ -142,10 +142,7 @@ impl<'a> Parser<'a> {
         if self.matches(&[TokenType::BANG, TokenType::MINUS]) {
             let operator = self.previous().clone();
             let right = self.unary()?;
-            Ok(Box::new(Expr::Unary {
-                operator,
-                right: right,
-            }))
+            Ok(Box::new(Expr::Unary { operator, right }))
         } else {
             self.primary()
         }
