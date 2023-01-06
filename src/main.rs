@@ -1,3 +1,4 @@
+use jlox::parser::Parser;
 use jlox::scanner::Scanner;
 use std::fs::File;
 use std::io::{stdin, stdout, Read, Write};
@@ -52,8 +53,7 @@ fn run_prompt() -> io::Result<()> {
 fn run(source: String) {
     let mut scanner = Scanner::new(source);
     let tokens = scanner.scan_tokens();
-
-    for token in tokens {
-        println!("{}", token)
-    }
+    let mut parser = Parser::new(tokens);
+    let expr = parser.parse();
+    println!("{:#?}", expr)
 }

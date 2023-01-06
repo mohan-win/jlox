@@ -8,13 +8,13 @@ use std::error::Error;
 use std::fmt;
 
 /// ToDo:: refractor using parser combinators
-pub struct Parser {
-    tokens: Vec<Token>,
+pub struct Parser<'a> {
+    tokens: &'a Vec<Token>,
     current: usize,
 }
 
-impl Parser {
-    pub fn new(tokens: Vec<Token>) -> Parser {
+impl<'a> Parser<'a> {
+    pub fn new(tokens: &Vec<Token>) -> Parser {
         Parser { tokens, current: 0 }
     }
 
@@ -172,6 +172,7 @@ impl Parser {
             self.consume(&TokenType::RIGHT_PARAN, "Expect ) after expression")?;
             Ok(Box::new(Expr::Grouping { expression: expr }))
         } else {
+            self.advance();
             Err(ParserError::new(
                 self.previous(),
                 "Unsupported primary token",
