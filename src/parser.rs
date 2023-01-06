@@ -14,8 +14,12 @@ pub struct Parser {
 }
 
 impl Parser {
-    fn new(tokens: Vec<Token>) -> Parser {
+    pub fn new(tokens: Vec<Token>) -> Parser {
         Parser { tokens, current: 0 }
+    }
+
+    pub fn parse(&mut self) -> ParserBoxdResult<Expr> {
+        self.expression()
     }
 
     fn is_at_end(&self) -> bool {
@@ -68,119 +72,105 @@ impl Parser {
         }
     }
 
-    fn expression(&mut self) -> ParserResult<Expr> {
+    fn expression(&mut self) -> ParserBoxdResult<Expr> {
         self.equality()
     }
 
-    fn equality(&mut self) -> ParserResult<Expr> {
-        let mut expr: Expr = self.comparison()?;
+    fn equality(&mut self) -> ParserBoxdResult<Expr> {
+        let mut expr = self.comparison()?;
 
         while self.matches(&[TokenType::BANG_EQUAL, TokenType::EQUAL_EQUAL]) {
             let operator = self.previous().clone();
-            let right: Expr = self.comparison()?;
-            expr = Expr::Binary {
-                left: Box::new(expr),
+            let right = self.comparison()?;
+            expr = Box::new(Expr::Binary {
+                left: expr,
                 operator,
-                right: Box::new(right),
-            }
+                right,
+            })
         }
         Ok(expr)
     }
 
-    fn comparison(&mut self) -> ParserResult<Expr> {
+    fn comparison(&mut self) -> ParserBoxdResult<Expr> {
         use TokenType::*;
 
-        let mut expr: Expr = self.term()?;
+        let mut expr = self.term()?;
         while self.matches(&[GREATER, GREATER_EQUAL, LESS, LESS_EQUAL]) {
             let operator = self.previous().clone();
-            let right: Expr = self.term()?;
-            expr = Expr::Binary {
-                left: Box::new(expr),
+            let right = self.term()?;
+            expr = Box::new(Expr::Binary {
+                left: expr,
                 operator,
-                right: Box::new(right),
-            }
+                right,
+            })
         }
         Ok(expr)
     }
 
-    fn term(&mut self) -> ParserResult<Expr> {
-        let mut expr: Expr = self.factor()?;
+    fn term(&mut self) -> ParserBoxdResult<Expr> {
+        let mut expr = self.factor()?;
 
         while self.matches(&[TokenType::MINUS, TokenType::PLUS]) {
             let operator = self.previous().clone();
-            let right: Expr = self.factor()?;
-            expr = Expr::Binary {
-                left: Box::new(expr),
+            let right = self.factor()?;
+            expr = Box::new(Expr::Binary {
+                left: expr,
                 operator,
-                right: Box::new(right),
-            }
+                right,
+            })
         }
 
         Ok(expr)
     }
 
-    fn factor(&mut self) -> ParserResult<Expr> {
-        let mut left: Expr = self.unary()?;
+    fn factor(&mut self) -> ParserBoxdResult<Expr> {
+        let mut expr = self.unary()?;
 
         while self.matches(&[TokenType::STAR, TokenType::SLASH]) {
             let operator = self.previous().clone();
-            let right: Expr = self.unary()?;
-            left = Expr::Binary {
-                left: Box::new(left),
+            let right = self.unary()?;
+            expr = Box::new(Expr::Binary {
+                left: expr,
                 operator,
-                right: Box::new(right),
-            }
+                right,
+            })
         }
-        Ok(left)
+        Ok(expr)
     }
 
-    fn unary(&mut self) -> ParserResult<Expr> {
+    fn unary(&mut self) -> ParserBoxdResult<Expr> {
         if self.matches(&[TokenType::BANG, TokenType::MINUS]) {
             let operator = self.previous().clone();
             let right = self.unary()?;
-            Ok(Expr::Unary {
+            Ok(Box::new(Expr::Unary {
                 operator,
-                right: Box::new(right),
-            })
+                right: right,
+            }))
         } else {
             self.primary()
         }
     }
 
-    fn primary(&mut self) -> ParserResult<Expr> {
-        if self.matches(&[TokenType::FALSE]) {
-            Ok(Expr::Litral(VAL::False))
-        } else if self.matches(&[TokenType::TRUE]) {
-            Ok(Expr::Litral(VAL::True))
-        } else if self.matches(&[TokenType::NIL]) {
-            Ok(Expr::Litral(VAL::Nil))
-        } else if self.matches(&[TokenType::NUMBER { litral: 0.0 }]) {
-            // Note the litral value (0.0) is ignored in match(..) only discreminant is considered
-            if let TokenType::NUMBER { litral } = self.previous().token_type {
-                Ok(Expr::Litral(VAL::NUMBER(litral)))
-            } else {
-                Err(ParserError::new(
-                    self.previous(),
-                    "token_type is expected to be NUMBER",
-                ))
-            }
-        } else if self.matches(&[TokenType::STRING {
-            litral: String::from(""),
-        }]) {
-            if let TokenType::STRING { litral } = &self.previous().token_type {
-                return Ok(Expr::Litral(VAL::STRING(litral.clone())));
-            } else {
-                Err(ParserError::new(
-                    self.previous(),
-                    "token_type is expected to be STRING",
-                ))
-            }
-        } else if self.matches(&[TokenType::LEFT_PARAN]) {
+    fn primary(&mut self) -> ParserBoxdResult<Expr> {
+        use Expr::*;
+        use TokenType::*;
+
+        let expr: Option<Expr> = match &self.peek().token_type {
+            FALSE => Some(Litral(VAL::False)),
+            TRUE => Some(Litral(VAL::True)),
+            NIL => Some(Litral(VAL::Nil)),
+            NUMBER { litral } => Some(Litral(VAL::NUMBER(litral.clone()))),
+            STRING { litral } => Some(Litral(VAL::STRING(litral.clone()))),
+            _ => None,
+        };
+        if let Some(e) = expr {
+            self.advance(); // Important: comsume token & advance
+            return Ok(Box::new(e));
+        } else if let LEFT_PARAN = self.peek().token_type {
+            self.advance(); // Important: comsume token & advance
             let expr = self.expression()?;
-            self.consume(&TokenType::RIGHT_PARAN, "Expect ) after expression");
-            Ok(Expr::Grouping {
-                expression: Box::new(expr),
-            })
+            self.consume(&TokenType::RIGHT_PARAN, "Expect ) after expression")?;
+            Ok(Box::new(Expr::Grouping { expression: expr }))
         } else {
             Err(ParserError::new(
                 self.previous(),
@@ -252,3 +242,4 @@ impl fmt::Display for ParserError {
 impl Error for ParserError {}
 
 pub type ParserResult<T> = Result<T, ParserError>;
+pub type ParserBoxdResult<T> = ParserResult<Box<T>>;
