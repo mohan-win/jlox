@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, mem::discriminant};
 #[derive(Debug, Clone)]
 #[allow(non_camel_case_types)]
 pub enum TokenType {
@@ -51,11 +51,17 @@ pub enum TokenType {
     EOF,
 }
 
-#[derive(Debug)]
+impl PartialEq for TokenType {
+    fn eq(&self, other: &Self) -> bool {
+        discriminant(self) == discriminant(other)
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Token {
-    token_type: TokenType,
-    lexeme: String,
-    line: usize,
+    pub token_type: TokenType,
+    pub lexeme: String,
+    pub line: usize,
 }
 
 impl Token {
