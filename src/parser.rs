@@ -1,6 +1,6 @@
 use crate::{
     ast::Expr,
-    ast::VAL,
+    ast::LitralValue,
     error::report,
     token::{Token, TokenType},
 };
@@ -153,11 +153,11 @@ impl<'a> Parser<'a> {
         use TokenType::*;
 
         let expr: Option<Expr> = match &self.peek().token_type {
-            FALSE => Some(Litral(VAL::False)),
-            TRUE => Some(Litral(VAL::True)),
-            NIL => Some(Litral(VAL::Nil)),
-            NUMBER { litral } => Some(Litral(VAL::NUMBER(litral.clone()))),
-            STRING { litral } => Some(Litral(VAL::STRING(litral.clone()))),
+            FALSE => Some(Litral(LitralValue::False)),
+            TRUE => Some(Litral(LitralValue::True)),
+            NIL => Some(Litral(LitralValue::Nil)),
+            NUMBER { litral } => Some(Litral(LitralValue::NUMBER(litral.clone()))),
+            STRING { litral } => Some(Litral(LitralValue::STRING(litral.clone()))),
             _ => None,
         };
         if let Some(e) = expr {

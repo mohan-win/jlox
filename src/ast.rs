@@ -1,7 +1,7 @@
 use crate::token::Token;
 
 #[derive(Debug)]
-pub enum VAL {
+pub enum LitralValue {
     NUMBER(f64),
     STRING(String),
     True,
@@ -11,7 +11,7 @@ pub enum VAL {
 
 #[derive(Debug)]
 pub enum Expr {
-    Litral(VAL),
+    Litral(LitralValue),
     Unary {
         operator: Token,
         right: Box<Expr>,
