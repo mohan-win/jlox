@@ -207,7 +207,7 @@ impl Scanner {
             self.advance(); // The closing ".
         }
 
-        let value = self.source_graphemes[self.pos.start + 1..self.pos.current].join("");
+        let value = self.source_graphemes[self.pos.start + 1..self.pos.current - 1].join("");
         self.add_token(TokenType::STRING { litral: value })
     }
 
