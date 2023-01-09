@@ -1,3 +1,5 @@
+use super::runtime_error::{RuntimeError, RuntimeResult};
+use crate::ast::LitralValue;
 use std::cmp::{Ordering, PartialOrd};
 use std::ops::{Add, Div, Mul, Neg, Not, Sub};
 
@@ -9,61 +11,71 @@ pub enum RuntimeValue {
 }
 
 impl Neg for RuntimeValue {
-    type Output = Self;
+    type Output = RuntimeResult;
     fn neg(self) -> Self::Output {
         if let Self::Number(val) = self {
-            Self::Number(val * -1.0)
+            Ok(Self::Number(val * -1.0))
         } else {
-            panic!("Can't negate anything other than number") // ToDo:: replace it with runtime error
+            Err(RuntimeError::new_with_message(
+                "Can't negate anything other than number",
+            ))
         }
     }
 }
 
 impl Mul for RuntimeValue {
-    type Output = Self;
+    type Output = RuntimeResult;
     fn mul(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
-            (Self::Number(lhs), Self::Number(rhs)) => Self::Number(lhs * rhs),
-            _ => panic!("Multiplication is allowed only between numbers"), // ToDo::
+            (Self::Number(lhs), Self::Number(rhs)) => Ok(Self::Number(lhs * rhs)),
+            _ => Err(RuntimeError::new_with_message(
+                "Multiplication is allowed only between numbers",
+            )),
         }
     }
 }
 
 impl Div for RuntimeValue {
-    type Output = Self;
+    type Output = RuntimeResult;
     fn div(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
-            (Self::Number(lhs), Self::Number(rhs)) => Self::Number(lhs / rhs),
-            _ => panic!("division is allowed only between numbers"), // ToDo::
+            (Self::Number(lhs), Self::Number(rhs)) => Ok(Self::Number(lhs / rhs)),
+            _ => Err(RuntimeError::new_with_message(
+                "division is allowed only between numbers",
+            )),
         }
     }
 }
 
 impl Add for RuntimeValue {
-    type Output = Self;
+    type Output = RuntimeResult;
     fn add(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
-            (Self::Number(lhs), Self::Number(rhs)) => Self::Number(lhs + rhs),
-            (Self::String(lhs), Self::String(rhs)) => Self::String(format!("{}{}", lhs, rhs)),
-            _ => panic!("addition is allowed only between numbers"), // ToDo::
+            (Self::Number(lhs), Self::Number(rhs)) => Ok(Self::Number(lhs + rhs)),
+            (Self::String(lhs), Self::String(rhs)) => Ok(Self::String(format!("{}{}", lhs, rhs))),
+            _ => Err(RuntimeError::new_with_message(
+                "addition is allowed only between numbers",
+            )),
         }
     }
 }
 
 impl Sub for RuntimeValue {
-    type Output = Self;
+    type Output = RuntimeResult;
     fn sub(self, rhs: Self) -> Self::Output {
-        self + -rhs
+        self + rhs.not()?
     }
 }
 
 impl Not for RuntimeValue {
-    type Output = Self;
+    type Output = RuntimeResult;
     fn not(self) -> Self::Output {
         if let Self::Boolean(val) = self {
-            Self::Boolean(!val)
+            Ok(Self::Boolean(!val))
         } else {
-            panic!("Not is allowed only on booleans")
+            Err(RuntimeError::new_with_message(
+                "Not is allowed only on booleans",
+            ))
         }
     }
 }
@@ -144,7 +156,6 @@ impl RuntimeValue {
     }
 }
 
-use crate::ast::LitralValue;
 impl From<LitralValue> for RuntimeValue {
     fn from(value: LitralValue) -> Self {
         match value {

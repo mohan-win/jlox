@@ -1,19 +1,26 @@
 use crate::{ast::Expr, token::TokenType};
 
+pub mod runtime_error;
 pub mod runtime_value;
 
-use self::runtime_value::RuntimeValue;
+use self::{
+    runtime_error::{RuntimeError, RuntimeResult},
+    runtime_value::RuntimeValue,
+};
 
-pub fn evaluate(expr: &Expr) -> RuntimeValue {
+pub fn evaluate(expr: &Expr) -> RuntimeResult {
     match expr {
         Expr::Grouping { expression } => evaluate(expression),
         Expr::Unary { operator, right } => {
-            let right = evaluate(right);
+            let right = evaluate(right)?;
 
             match operator.token_type {
                 TokenType::MINUS => -right,
                 TokenType::BANG => !right.is_truthy(),
-                _ => panic!("Only - and ! are supported as a unary operator!"), // ToDo::
+                _ => Err(RuntimeError::new(
+                    operator,
+                    "Only - and ! are supported as a unary operator!",
+                )),
             }
         }
         Expr::Binary {
@@ -21,22 +28,23 @@ pub fn evaluate(expr: &Expr) -> RuntimeValue {
             operator,
             right,
         } => {
-            let left = evaluate(left);
-            let right = evaluate(right);
-            match operator.token_type {
+            let left = evaluate(left)?;
+            let right = evaluate(right)?;
+            let result = match operator.token_type {
                 TokenType::MINUS => left - right,
                 TokenType::PLUS => left + right,
                 TokenType::STAR => left * right,
                 TokenType::SLASH => left / right,
-                TokenType::GREATER => RuntimeValue::Boolean(left > right),
-                TokenType::GREATER_EQUAL => RuntimeValue::Boolean(left >= right),
-                TokenType::LESS => RuntimeValue::Boolean(left < right),
-                TokenType::LESS_EQUAL => RuntimeValue::Boolean(left <= right),
+                TokenType::GREATER => Ok(RuntimeValue::Boolean(left > right)),
+                TokenType::GREATER_EQUAL => Ok(RuntimeValue::Boolean(left >= right)),
+                TokenType::LESS => Ok(RuntimeValue::Boolean(left < right)),
+                TokenType::LESS_EQUAL => Ok(RuntimeValue::Boolean(left <= right)),
                 TokenType::BANG_EQUAL => !RuntimeValue::Boolean(left == right),
-                TokenType::EQUAL_EQUAL => RuntimeValue::Boolean(left == right),
-                _ => panic!("Unsupported operator"), // ToDo::
-            }
+                TokenType::EQUAL_EQUAL => Ok(RuntimeValue::Boolean(left == right)),
+                _ => Err(RuntimeError::new(operator, "Unsupported operator")),
+            };
+            result.map_err(|e| RuntimeError::new(operator, &e.message))
         }
-        Expr::Litral(litral) => litral.clone().into(),
+        Expr::Litral(litral) => Ok(litral.clone().into()),
     }
 }
