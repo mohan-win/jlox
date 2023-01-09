@@ -64,7 +64,7 @@ impl Add for RuntimeValue {
 impl Sub for RuntimeValue {
     type Output = RuntimeResult;
     fn sub(self, rhs: Self) -> Self::Output {
-        self + rhs.not()?
+        self + (-rhs)?
     }
 }
 
