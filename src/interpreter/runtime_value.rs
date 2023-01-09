@@ -1,6 +1,7 @@
 use super::runtime_error::{RuntimeError, RuntimeResult};
 use crate::ast::LitralValue;
 use std::cmp::{Ordering, PartialOrd};
+use std::fmt;
 use std::ops::{Add, Div, Mul, Neg, Not, Sub};
 
 pub enum RuntimeValue {
@@ -152,6 +153,18 @@ impl RuntimeValue {
         match self {
             Self::Nil | Self::Boolean(false) => Self::Boolean(false),
             _ => Self::Boolean(true),
+        }
+    }
+}
+
+impl fmt::Display for RuntimeValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use RuntimeValue::*;
+        match self {
+            Nil => write!(f, "Nil"),
+            Number(value) => write!(f, "{}", value),
+            String(value) => write!(f, "{}", value),
+            Boolean(value) => write!(f, "{}", value),
         }
     }
 }

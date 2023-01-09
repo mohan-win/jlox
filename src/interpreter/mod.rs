@@ -8,7 +8,11 @@ use self::{
     runtime_value::RuntimeValue,
 };
 
-pub fn evaluate(expr: &Expr) -> RuntimeResult {
+pub fn interpret(expr: &Expr) -> RuntimeResult {
+    evaluate(expr)
+}
+
+fn evaluate(expr: &Expr) -> RuntimeResult {
     match expr {
         Expr::Grouping { expression } => evaluate(expression),
         Expr::Unary { operator, right } => {

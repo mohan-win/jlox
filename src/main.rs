@@ -1,9 +1,12 @@
+use jlox::interpreter;
+use jlox::interpreter::runtime_value::RuntimeValue;
 use jlox::parser::Parser;
 use jlox::scanner::Scanner;
+use std::env;
+use std::error::Error;
 use std::fs::File;
 use std::io::{stdin, stdout, Read, Write};
 use std::process::ExitCode;
-use std::{env, io};
 
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().collect();
@@ -16,7 +19,7 @@ fn main() -> ExitCode {
                 eprintln!("Erred out {:?}", err);
                 ExitCode::FAILURE
             }
-            Ok(()) => ExitCode::SUCCESS,
+            Ok(_) => ExitCode::SUCCESS,
         }
     } else {
         match run_prompt() {
@@ -29,16 +32,14 @@ fn main() -> ExitCode {
     }
 }
 
-fn run_file(file_path: &String) -> io::Result<()> {
+fn run_file(file_path: &String) -> Result<RuntimeValue, Box<dyn Error>> {
     let mut file = File::open(file_path)?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
-    run(contents);
-
-    Ok(())
+    run(contents)
 }
 
-fn run_prompt() -> io::Result<()> {
+fn run_prompt() -> Result<(), Box<dyn Error>> {
     loop {
         print!("> ");
         stdout().flush()?;
@@ -46,14 +47,18 @@ fn run_prompt() -> io::Result<()> {
         let mut line = String::new();
         stdin().read_line(&mut line)?;
         let line = line.trim().to_string();
-        run(line)
+        match run(line) {
+            Ok(result) => println!("{}", result),
+            Err(err) => println!("Runtimer error {}", err),
+        }
     }
 }
 
-fn run(source: String) {
+fn run(source: String) -> Result<RuntimeValue, Box<dyn Error>> {
     let mut scanner = Scanner::new(source);
     let tokens = scanner.scan_tokens();
     let mut parser = Parser::new(tokens);
-    let expr = parser.parse();
-    println!("{:#?}", expr)
+    let expr = parser.parse()?;
+    let result = interpreter::interpret(&expr)?;
+    Ok(result)
 }
