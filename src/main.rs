@@ -1,6 +1,6 @@
-use jlox::error::runtime_error;
+use jlox::error::{error_at_runtime, error_in_parser};
 use jlox::interpreter;
-use jlox::parser::Parser;
+use jlox::parser::{Parser, ParserError};
 use jlox::scanner::Scanner;
 use std::env;
 use std::error::Error;
@@ -36,7 +36,10 @@ fn run_file(file_path: &String) -> Result<(), Box<dyn Error>> {
     let mut file = File::open(file_path)?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
-    run(contents)
+    if let Err(parser_err) = run(contents) {
+        error_in_parser(&parser_err);
+    }
+    Ok(())
 }
 
 fn run_prompt() -> Result<(), Box<dyn Error>> {
@@ -47,11 +50,13 @@ fn run_prompt() -> Result<(), Box<dyn Error>> {
         let mut line = String::new();
         stdin().read_line(&mut line)?;
         let line = line.trim().to_string();
-        run(line)?
+        if let Err(err) = run(line) {
+            error_in_parser(&err)
+        }
     }
 }
 
-fn run(source: String) -> Result<(), Box<dyn Error>> {
+fn run(source: String) -> Result<(), ParserError> {
     let mut scanner = Scanner::new(source);
     let tokens = scanner.scan_tokens();
     println!("{:#?}", tokens);
@@ -59,8 +64,8 @@ fn run(source: String) -> Result<(), Box<dyn Error>> {
     let expr = parser.parse()?;
     println!("{:#?}", expr);
     if let Err(err) = interpreter::interpret(&expr) {
-        runtime_error(&err);
-        Err(Box::new(err))
+        error_at_runtime(&err);
+        Ok(())
     } else {
         Ok(())
     }

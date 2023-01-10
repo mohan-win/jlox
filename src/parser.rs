@@ -1,7 +1,6 @@
 use crate::{
     ast::Expr,
     ast::{LitralValue, Stmt},
-    error::report,
     token::{Token, TokenType},
 };
 use std::error::Error;
@@ -224,30 +223,17 @@ impl<'a> Parser<'a> {
 
 #[derive(Debug)]
 pub struct ParserError {
-    token_type: TokenType,
-    line: usize,
-    message: String,
+    pub token_type: TokenType,
+    pub line: usize,
+    pub message: String,
 }
 
 impl ParserError {
     fn new(token: &Token, message: &str) -> ParserError {
-        Self::error(token, message);
         ParserError {
             token_type: token.token_type.clone(),
             line: token.line,
             message: String::from(message),
-        }
-    }
-
-    fn error(token: &Token, message: &str) {
-        if token.token_type == TokenType::EOF {
-            report(token.line, " at end", message)
-        } else {
-            report(
-                token.line,
-                format!("at '{}'", token.lexeme).as_str(),
-                message,
-            )
         }
     }
 }
