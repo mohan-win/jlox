@@ -49,7 +49,7 @@ fn run_prompt() -> Result<(), Box<dyn Error>> {
         let line = line.trim().to_string();
         match run(line) {
             Ok(result) => println!("{}", result),
-            Err(err) => println!("Runtimer error {}", err),
+            Err(err) => println!("{}", err),
         }
     }
 }
