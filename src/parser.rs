@@ -134,14 +134,21 @@ impl<'a> Parser<'a> {
     fn term(&mut self) -> ParserBoxdResult<Expr> {
         let mut expr = self.factor()?;
 
+        let mut factors: Vec<(Box<Expr>, Token)> = Vec::new();
         while self.matches(&[TokenType::MINUS, TokenType::PLUS]) {
             let operator = self.previous().clone();
-            let right = self.factor()?;
+            factors.push((expr, operator));
+            expr = self.factor()?;
+        }
+
+        factors.reverse(); // reverse!!
+        for (left, oper) in factors {
+            // Note: Make the +, - right associative so that "1+2 = " + 1 + 2, will evaluate to "1+2 = 3"
             expr = Box::new(Expr::Binary {
-                left: expr,
-                operator,
-                right,
-            })
+                left,
+                operator: oper,
+                right: expr,
+            });
         }
 
         Ok(expr)
