@@ -1,12 +1,2 @@
-var s = "I'm a 
-         multiline 
-         string";
-class Breakfast {
-  cook() {
-    /*print /*"Idly is being cooked"*/*/;
-  }
-
-  serve(who) {
-    pring "Enjoy your breakfast" + who + ".";
-  }
-}
+10+3/0.0;
+1+2-3/4;

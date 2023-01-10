@@ -19,7 +19,7 @@ fn main() -> ExitCode {
                 eprintln!("Erred out {:?}", err);
                 ExitCode::FAILURE
             }
-            Ok(_) => ExitCode::SUCCESS,
+            Ok(()) => ExitCode::SUCCESS,
         }
     } else {
         match run_prompt() {
@@ -32,11 +32,15 @@ fn main() -> ExitCode {
     }
 }
 
-fn run_file(file_path: &String) -> Result<RuntimeValue, Box<dyn Error>> {
+fn run_file(file_path: &String) -> Result<(), Box<dyn Error>> {
     let mut file = File::open(file_path)?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
-    run(contents)
+    match run(contents) {
+        Ok(result) => println!("{}", result),
+        Err(err) => println!("{}", err),
+    }
+    Ok(())
 }
 
 fn run_prompt() -> Result<(), Box<dyn Error>> {
@@ -57,8 +61,10 @@ fn run_prompt() -> Result<(), Box<dyn Error>> {
 fn run(source: String) -> Result<RuntimeValue, Box<dyn Error>> {
     let mut scanner = Scanner::new(source);
     let tokens = scanner.scan_tokens();
+    println!("{:#?}", tokens);
     let mut parser = Parser::new(tokens);
     let expr = parser.parse()?;
+    println!("{:#?}", expr);
     let result = interpreter::interpret(&expr)?;
     Ok(result)
 }
