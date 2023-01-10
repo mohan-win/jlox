@@ -37,4 +37,4 @@ impl fmt::Display for RuntimeError {
 
 impl Error for RuntimeError {}
 
-pub type RuntimeResult = Result<RuntimeValue, RuntimeError>;
+pub type RuntimeResult<T = RuntimeValue> = Result<T, RuntimeError>;

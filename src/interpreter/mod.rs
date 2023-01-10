@@ -1,4 +1,7 @@
-use crate::{ast::Expr, token::TokenType};
+use crate::{
+    ast::{Expr, Stmt},
+    token::TokenType,
+};
 
 pub mod runtime_error;
 pub mod runtime_value;
@@ -8,8 +11,23 @@ use self::{
     runtime_value::RuntimeValue,
 };
 
-pub fn interpret(expr: &Expr) -> RuntimeResult {
-    evaluate(expr)
+pub fn interpret(statements: &Vec<Stmt>) -> RuntimeResult<()> {
+    statements
+        .iter()
+        .try_for_each(|statement| execute(statement))
+}
+
+fn execute(statement: &Stmt) -> RuntimeResult<()> {
+    match statement {
+        Stmt::PrintStmt { expression } => {
+            let value = evaluate(expression)?;
+            println!("{}", value);
+        }
+        Stmt::ExpressionStmt { expression } => {
+            evaluate(expression)?;
+        }
+    }
+    Ok(())
 }
 
 fn evaluate(expr: &Expr) -> RuntimeResult {

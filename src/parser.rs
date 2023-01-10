@@ -1,6 +1,6 @@
 use crate::{
     ast::Expr,
-    ast::LitralValue,
+    ast::{LitralValue, Stmt},
     error::report,
     token::{Token, TokenType},
 };
@@ -18,8 +18,13 @@ impl<'a> Parser<'a> {
         Parser { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> ParserBoxdResult<Expr> {
-        self.expression()
+    pub fn parse(&mut self) -> ParserResult<Vec<Stmt>> {
+        let mut statements: Vec<Stmt> = Vec::new();
+        while !self.is_at_end() {
+            let stmt = self.statement()?;
+            statements.push(stmt);
+        }
+        Ok(statements)
     }
 
     fn is_at_end(&self) -> bool {
@@ -70,6 +75,26 @@ impl<'a> Parser<'a> {
         } else {
             Err(ParserError::new(self.peek(), message))
         }
+    }
+
+    fn statement(&mut self) -> ParserResult<Stmt> {
+        if self.matches(&[TokenType::PRINT]) {
+            self.print_statement()
+        } else {
+            self.expression_statement()
+        }
+    }
+
+    fn print_statement(&mut self) -> ParserResult<Stmt> {
+        let expr = self.expression()?;
+        self.consume(&TokenType::SEMICOLON, "Expect ; after expression")?;
+        Ok(Stmt::PrintStmt { expression: *expr })
+    }
+
+    fn expression_statement(&mut self) -> ParserResult<Stmt> {
+        let expr = self.expression()?;
+        self.consume(&TokenType::SEMICOLON, "Expect ; after expression")?;
+        Ok(Stmt::ExpressionStmt { expression: *expr })
     }
 
     fn expression(&mut self) -> ParserBoxdResult<Expr> {

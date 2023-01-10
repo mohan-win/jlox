@@ -25,3 +25,9 @@ pub enum Expr {
         expression: Box<Expr>,
     },
 }
+
+#[derive(Debug)]
+pub enum Stmt {
+    PrintStmt { expression: Expr },
+    ExpressionStmt { expression: Expr },
+}
