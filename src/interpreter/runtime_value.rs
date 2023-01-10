@@ -72,7 +72,7 @@ impl Sub for RuntimeValue {
     type Output = RuntimeResult;
     fn sub(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
-            (Self::Number(lhs), Self::Number(rhs)) => Ok(Self::Number(lhs + rhs)),
+            (Self::Number(lhs), Self::Number(rhs)) => Ok(Self::Number(lhs - rhs)),
             _ => Err(RuntimeError::new_with_message(
                 "subtraction is allowed only between numbers",
             )),
