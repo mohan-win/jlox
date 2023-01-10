@@ -60,7 +60,12 @@ impl Add for RuntimeValue {
     fn add(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             (Self::Number(lhs), Self::Number(rhs)) => Ok(Self::Number(lhs + rhs)),
-            (Self::String(lhs), Self::String(rhs)) => Ok(Self::String(format!("{}{}", lhs, rhs))),
+            (Self::String(lhs), rhs_value) => match rhs_value {
+                Self::Number(rhs) => Ok(Self::String(format!("{}{}", lhs, rhs))),
+                Self::String(rhs) => Ok(Self::String(format!("{}{}", lhs, rhs))),
+                Self::Boolean(rhs) => Ok(Self::String(format!("{}{}", lhs, rhs))),
+                Self::Nil => Ok(Self::String(format!("{}Nil", lhs))),
+            },
             _ => Err(RuntimeError::new_with_message(
                 "addition is allowed only between numbers",
             )),
