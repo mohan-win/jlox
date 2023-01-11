@@ -216,7 +216,7 @@ impl<'a> Parser<'a> {
             NIL => Some(Litral(LitralValue::Nil)),
             NUMBER { litral } => Some(Litral(LitralValue::NUMBER(litral.clone()))),
             STRING { litral } => Some(Litral(LitralValue::STRING(litral.clone()))),
-            IDENTIFIER => Some(Expr::Variable(self.previous().clone())),
+            IDENTIFIER => Some(Expr::Variable(self.peek().clone())),
             _ => None,
         };
         if let Some(e) = expr {
