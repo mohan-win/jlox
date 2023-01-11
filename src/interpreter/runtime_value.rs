@@ -4,6 +4,7 @@ use std::cmp::{Ordering, PartialOrd};
 use std::fmt;
 use std::ops::{Add, Div, Mul, Neg, Not, Sub};
 
+#[derive(Clone)]
 pub enum RuntimeValue {
     Number(f64),
     String(String),

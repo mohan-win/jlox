@@ -96,7 +96,7 @@ impl<'a> Parser<'a> {
     }
 
     fn var_declaration(&mut self) -> ParserResult<Stmt> {
-        self.consume(&TokenType::IDENTIFIER, "Expect a variable name");
+        self.consume(&TokenType::IDENTIFIER, "Expect a variable name")?;
         let name = self.previous().clone();
 
         let mut expression: Option<Expr> = None;
@@ -106,7 +106,7 @@ impl<'a> Parser<'a> {
         self.consume(
             &TokenType::SEMICOLON,
             "Expect ';' after variable declaration",
-        );
+        )?;
         Ok(Stmt::Var { name, expression })
     }
 
