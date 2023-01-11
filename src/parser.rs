@@ -1,6 +1,7 @@
 use crate::{
     ast::Expr,
     ast::{LitralValue, Stmt},
+    error::error_in_parser,
     token::{Token, TokenType},
 };
 use std::error::Error;
@@ -17,13 +18,15 @@ impl<'a> Parser<'a> {
         Parser { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> ParserResult<Vec<Stmt>> {
+    pub fn parse(&mut self) -> Vec<Stmt> {
         let mut statements: Vec<Stmt> = Vec::new();
         while !self.is_at_end() {
-            let stmt = self.statement()?;
-            statements.push(stmt);
+            let stmt = self.declaration();
+            if let Some(stmt) = stmt {
+                statements.push(stmt);
+            }
         }
-        Ok(statements)
+        statements
     }
 
     fn is_at_end(&self) -> bool {
@@ -74,6 +77,37 @@ impl<'a> Parser<'a> {
         } else {
             Err(ParserError::new(self.peek(), message))
         }
+    }
+
+    fn declaration(&mut self) -> Option<Stmt> {
+        let stmt = if self.matches(&[TokenType::VAR]) {
+            self.var_declaration()
+        } else {
+            self.statement()
+        };
+
+        if let Err(parse_err) = stmt {
+            error_in_parser(&parse_err);
+            self.synchronize();
+            None
+        } else {
+            stmt.ok()
+        }
+    }
+
+    fn var_declaration(&mut self) -> ParserResult<Stmt> {
+        self.consume(&TokenType::IDENTIFIER, "Expect a variable name");
+        let name = self.previous().clone();
+
+        let mut expression: Option<Expr> = None;
+        if self.matches(&[TokenType::EQUAL]) {
+            expression = Some(*self.expression()?);
+        }
+        self.consume(
+            &TokenType::SEMICOLON,
+            "Expect ';' after variable declaration",
+        );
+        Ok(Stmt::Var { name, expression })
     }
 
     fn statement(&mut self) -> ParserResult<Stmt> {
@@ -182,6 +216,7 @@ impl<'a> Parser<'a> {
             NIL => Some(Litral(LitralValue::Nil)),
             NUMBER { litral } => Some(Litral(LitralValue::NUMBER(litral.clone()))),
             STRING { litral } => Some(Litral(LitralValue::STRING(litral.clone()))),
+            IDENTIFIER => Some(Expr::Variable(self.previous().clone())),
             _ => None,
         };
         if let Some(e) = expr {

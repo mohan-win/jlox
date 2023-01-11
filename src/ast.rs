@@ -12,6 +12,7 @@ pub enum LitralValue {
 #[derive(Debug)]
 pub enum Expr {
     Litral(LitralValue),
+    Variable(Token),
     Unary {
         operator: Token,
         right: Box<Expr>,
@@ -28,6 +29,14 @@ pub enum Expr {
 
 #[derive(Debug)]
 pub enum Stmt {
-    PrintStmt { expression: Expr },
-    ExpressionStmt { expression: Expr },
+    Var {
+        name: Token,
+        expression: Option<Expr>,
+    },
+    PrintStmt {
+        expression: Expr,
+    },
+    ExpressionStmt {
+        expression: Expr,
+    },
 }
