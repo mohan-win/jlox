@@ -25,6 +25,10 @@ pub enum Expr {
     Grouping {
         expression: Box<Expr>,
     },
+    Assign {
+        name: Token,
+        value: Box<Expr>,
+    },
 }
 
 #[derive(Debug)]

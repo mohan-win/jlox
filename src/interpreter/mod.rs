@@ -88,6 +88,10 @@ impl Interpreter {
             }
             Expr::Litral(litral) => Ok(litral.clone().into()),
             Expr::Variable(name) => self.environment.get(name),
+            Expr::Assign { name, value } => {
+                let value = self.evaluate(value)?;
+                self.environment.assign(name, value)
+            }
         }
     }
 }

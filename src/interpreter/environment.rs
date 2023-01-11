@@ -26,4 +26,15 @@ impl Environment {
             ))
         }
     }
+    pub fn assign(&mut self, name: &Token, value: RuntimeValue) -> RuntimeResult {
+        if let Some(_) = self.0.get(name.lexeme.as_str()) {
+            self.0.insert(name.lexeme.clone(), value.clone());
+            Ok(value)
+        } else {
+            Err(RuntimeError::new(
+                name,
+                format!("Variable {} is not declared", name.lexeme).as_str(),
+            ))
+        }
+    }
 }

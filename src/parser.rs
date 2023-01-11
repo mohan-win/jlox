@@ -131,7 +131,24 @@ impl<'a> Parser<'a> {
     }
 
     fn expression(&mut self) -> ParserBoxdResult<Expr> {
-        self.equality()
+        self.assignment()
+    }
+
+    fn assignment(&mut self) -> ParserBoxdResult<Expr> {
+        let expr = self.equality()?;
+
+        if self.matches(&[TokenType::EQUAL]) {
+            let equals = self.previous().clone();
+            let value = self.assignment()?;
+
+            if let Expr::Variable(token) = *expr {
+                return Ok(Box::new(Expr::Assign { name: token, value }));
+            } else {
+                error_in_parser(&ParserError::new(&equals, "Invalid assignment target"));
+            }
+        }
+
+        return Ok(expr);
     }
 
     fn equality(&mut self) -> ParserBoxdResult<Expr> {
