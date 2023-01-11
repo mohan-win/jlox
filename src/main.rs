@@ -36,11 +36,13 @@ fn run_file(file_path: &String) -> Result<(), Box<dyn Error>> {
     let mut file = File::open(file_path)?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
-    run(contents);
+    let mut interpreter = Interpreter::new();
+    run(contents, &mut interpreter);
     Ok(())
 }
 
 fn run_prompt() -> Result<(), Box<dyn Error>> {
+    let mut interpreter = Interpreter::new();
     loop {
         print!("> ");
         stdout().flush()?;
@@ -48,18 +50,17 @@ fn run_prompt() -> Result<(), Box<dyn Error>> {
         let mut line = String::new();
         stdin().read_line(&mut line)?;
         let line = line.trim().to_string();
-        run(line);
+        run(line, &mut interpreter);
     }
 }
 
-fn run(source: String) {
+fn run(source: String, interpreter: &mut Interpreter) {
     let mut scanner = Scanner::new(source);
     let tokens = scanner.scan_tokens();
-    println!("{:#?}", tokens);
+    //println!("{:#?}", tokens);
     let mut parser = Parser::new(tokens);
     let expr = parser.parse();
-    println!("{:#?}", expr);
-    let mut interpreter = Interpreter::new();
+    //println!("{:#?}", expr);
     if let Err(err) = interpreter.interpret(&expr) {
         error_at_runtime(&err);
     }
