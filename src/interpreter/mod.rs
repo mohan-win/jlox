@@ -14,13 +14,13 @@ use self::{
 };
 
 pub struct Interpreter {
-    environment: Environment,
+    environment: Option<Box<Environment>>,
 }
 
 impl Interpreter {
     pub fn new() -> Interpreter {
         Interpreter {
-            environment: Environment::new(),
+            environment: Some(Box::new(Environment::new())),
         }
     }
     pub fn interpret(&mut self, statements: &Vec<Stmt>) -> RuntimeResult<()> {
@@ -36,7 +36,10 @@ impl Interpreter {
                 if let Some(expression) = expression {
                     value = self.evaluate(expression)?;
                 }
-                self.environment.define(&name.lexeme, value)
+                self.environment
+                    .as_mut()
+                    .unwrap()
+                    .define(&name.lexeme, value)
             }
             Stmt::PrintStmt { expression } => {
                 let value = self.evaluate(expression)?;
@@ -45,8 +48,30 @@ impl Interpreter {
             Stmt::ExpressionStmt { expression } => {
                 self.evaluate(expression)?;
             }
+            Stmt::Block { statements } => {
+                let existing_environment = self.environment.take().unwrap();
+                self.execute_block(statements, Environment::new_with(existing_environment))?;
+            }
         }
         Ok(())
+    }
+
+    fn execute_block(
+        &mut self,
+        statements: &Vec<Stmt>,
+        block_environment: Environment,
+    ) -> RuntimeResult<()> {
+        // set block environment
+        self.environment = Some(Box::new(block_environment));
+
+        let result = statements
+            .iter()
+            .try_for_each(|statement| self.execute(statement));
+
+        // restore enclosing block;
+        self.environment = self.environment.take().unwrap().take_enclosing();
+
+        result
     }
 
     fn evaluate(&mut self, expr: &Expr) -> RuntimeResult {
@@ -87,10 +112,10 @@ impl Interpreter {
                 result.map_err(|e| RuntimeError::new(operator, &e.message))
             }
             Expr::Litral(litral) => Ok(litral.clone().into()),
-            Expr::Variable(name) => self.environment.get(name),
+            Expr::Variable(name) => self.environment.as_ref().unwrap().get(name),
             Expr::Assign { name, value } => {
                 let value = self.evaluate(value)?;
-                self.environment.assign(name, value)
+                self.environment.as_mut().unwrap().assign(name, value)
             }
         }
     }
