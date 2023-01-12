@@ -43,7 +43,7 @@ impl Interpreter {
             }
             Stmt::PrintStmt { expression } => {
                 let value = self.evaluate(expression)?;
-                print!("{}", value);
+                println!("{}", value);
             }
             Stmt::ExpressionStmt { expression } => {
                 self.evaluate(expression)?;

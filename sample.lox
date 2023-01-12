@@ -1,5 +1,19 @@
-var a = 10;
+var a = "global a";
+var b = "global b";
+var c = "global c";
 {
-    print "printing inside block";
+  var a = "outer a";
+  var b = "outer b";
+  {
+    var a = "inner a";
     print a;
+    print b;
+    print c;
+  }
+  print a;
+  print b;
+  print c;
 }
+print a;
+print b;
+print c;

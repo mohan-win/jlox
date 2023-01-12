@@ -57,10 +57,10 @@ fn run_prompt() -> Result<(), Box<dyn Error>> {
 fn run(source: String, interpreter: &mut Interpreter) {
     let mut scanner = Scanner::new(source);
     let tokens = scanner.scan_tokens();
-    println!("{:#?}", tokens);
+    //println!("{:#?}", tokens);
     let mut parser = Parser::new(tokens);
     let expr = parser.parse();
-    println!("{:#?}", expr);
+    //println!("{:#?}", expr);
     if let Err(err) = interpreter.interpret(&expr) {
         error_at_runtime(&err);
     }
