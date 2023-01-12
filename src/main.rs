@@ -49,7 +49,10 @@ fn run_prompt() -> Result<(), Box<dyn Error>> {
 
         let mut line = String::new();
         stdin().read_line(&mut line)?;
-        let line = line.trim().to_string();
+        let mut line = line.trim().to_string();
+        if !line.ends_with(";") {
+            line = format!("print {};", line);
+        }
         run(line, &mut interpreter);
     }
 }
