@@ -8,7 +8,7 @@ use super::{
 };
 
 pub struct Environment {
-    values: HashMap<String, RuntimeValue>,
+    values: HashMap<String, Option<RuntimeValue>>,
     enclosing: Option<Box<Environment>>,
 }
 
@@ -26,25 +26,28 @@ impl Environment {
             enclosing: Some(outer_scope),
         }
     }
-    pub fn define(&mut self, name: &str, value: RuntimeValue) {
+    pub fn define(&mut self, name: &str, value: Option<RuntimeValue>) {
         self.values.insert(String::from(name), value);
     }
     pub fn get(&self, name: &Token) -> RuntimeResult {
-        if let Some(value) = self.values.get(&name.lexeme) {
-            Ok(value.clone())
-        } else {
-            self.enclosing.as_ref().map_or(
+        match self.values.get(&name.lexeme) {
+            Some(Some(value)) => Ok(value.clone()),
+            Some(None) => Err(RuntimeError::new(
+                name,
+                format!("Variable \"{}\" used without initializing", name.lexeme).as_str(),
+            )),
+            None => self.enclosing.as_ref().map_or(
                 Err(RuntimeError::new(
                     name,
                     format!("Undefined variable \"{}\".", name.lexeme).as_str(),
                 )),
-                |encosing| encosing.get(name),
-            )
+                |enclosing| enclosing.get(name),
+            ),
         }
     }
     pub fn assign(&mut self, name: &Token, value: RuntimeValue) -> RuntimeResult {
         if let Some(_) = self.values.get(name.lexeme.as_str()) {
-            self.values.insert(name.lexeme.clone(), value.clone());
+            self.values.insert(name.lexeme.clone(), Some(value.clone()));
             Ok(value)
         } else {
             self.enclosing.as_mut().map_or(

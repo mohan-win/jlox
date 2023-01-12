@@ -32,9 +32,9 @@ impl Interpreter {
     fn execute(&mut self, statement: &Stmt) -> RuntimeResult<()> {
         match statement {
             Stmt::Var { name, expression } => {
-                let mut value = RuntimeValue::Nil;
+                let mut value = None;
                 if let Some(expression) = expression {
-                    value = self.evaluate(expression)?;
+                    value = Some(self.evaluate(expression)?);
                 }
                 self.environment
                     .as_mut()
