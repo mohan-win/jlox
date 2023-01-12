@@ -113,7 +113,6 @@ impl<'a> Parser<'a> {
     fn statement(&mut self) -> ParserResult<Stmt> {
         if self.matches(&[TokenType::LEFT_BRACE]) {
             let statements = self.block()?;
-            self.consume(&TokenType::RIGHT_BRACE, "Expect '}' after block")?;
             Ok(Stmt::Block { statements })
         } else if self.matches(&[TokenType::PRINT]) {
             self.print_statement()
@@ -136,12 +135,12 @@ impl<'a> Parser<'a> {
 
     fn block(&mut self) -> ParserResult<Vec<Stmt>> {
         let mut statements: Vec<Stmt> = Vec::new();
-        while self.check(&TokenType::RIGHT_BRACE) || !self.is_at_end() {
-            self.declaration().and_then(|statement| {
-                statements.push(statement);
-                Some(())
-            });
+        while !self.check(&TokenType::RIGHT_BRACE) && !self.is_at_end() {
+            if let Some(stmt) = self.declaration() {
+                statements.push(stmt);
+            }
         }
+        self.consume(&TokenType::RIGHT_BRACE, "Expect '}' after block")?;
         Ok(statements)
     }
 
