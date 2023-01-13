@@ -117,6 +117,8 @@ impl<'a> Parser<'a> {
             self.if_statement()
         } else if self.matches(&[TokenType::WHILE]) {
             self.while_statement()
+        } else if self.matches(&[TokenType::FOR]) {
+            self.for_statement()
         } else if self.matches(&[TokenType::LEFT_BRACE]) {
             let statements = self.block()?;
             Ok(Stmt::Block { statements })
@@ -150,6 +152,36 @@ impl<'a> Parser<'a> {
         Ok(Stmt::WhileStmt {
             condition: *condition,
             body: Box::new(body),
+        })
+    }
+
+    fn for_statement(&mut self) -> ParserResult<Stmt> {
+        self.consume(&TokenType::LEFT_PARAN, "Expect '(' after for")?;
+        let mut initializer = None;
+        if !self.check(&TokenType::SEMICOLON) {
+            initializer = self.declaration().and_then(|stmt| Some(Box::new(stmt)));
+        } else {
+            self.consume(
+                &TokenType::SEMICOLON,
+                "Expect ';' when for loop condition is empty",
+            )?;
+        }
+        let mut condition = None;
+        if !self.check(&TokenType::SEMICOLON) {
+            condition = Some(*self.expression()?);
+        }
+        self.consume(&TokenType::SEMICOLON, "Expect ';' after for condition")?;
+        let mut increment = None;
+        if !self.check(&TokenType::RIGHT_PARAN) {
+            increment = Some(*self.expression()?);
+        }
+        self.consume(&TokenType::RIGHT_PARAN, "Expect  matching ')' in for loop")?;
+        let body = Box::new(self.statement()?);
+        Ok(Stmt::ForStmt {
+            initializer,
+            condition,
+            increment,
+            body,
         })
     }
 
