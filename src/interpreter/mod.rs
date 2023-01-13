@@ -60,21 +60,6 @@ impl Interpreter {
                     self.execute(body)?;
                 }
             }
-            Stmt::ForStmt {
-                initializer,
-                condition,
-                increment,
-                body,
-            } => {
-                let existing_environment = self.environment.take().unwrap();
-                self.execute_for(
-                    initializer,
-                    condition,
-                    increment,
-                    body,
-                    Environment::new_with(existing_environment),
-                )?;
-            }
             Stmt::PrintStmt { expression } => {
                 let value = self.evaluate(expression)?;
                 println!("{}", value);
@@ -102,52 +87,6 @@ impl Interpreter {
         // restore enclosing block;
         self.environment = self.environment.take().unwrap().take_enclosing();
 
-        result
-    }
-
-    fn execute_for(
-        &mut self,
-        initializer: &Option<Box<Stmt>>,
-        condition: &Option<Expr>,
-        increment: &Option<Expr>,
-        body: &Box<Stmt>,
-        for_environment: Environment,
-    ) -> RuntimeResult<()> {
-        // set for environment
-        self.environment = Some(Box::new(for_environment));
-        if let Some(initializer) = initializer {
-            self.execute(initializer)?;
-        }
-        let mut is_condition_truthy = true;
-        let mut result: RuntimeResult<()> = Ok(());
-        loop {
-            if let Some(condition) = condition {
-                match self.evaluate(condition) {
-                    Ok(value) => {
-                        is_condition_truthy = bool::from(value);
-                    }
-                    Err(err) => {
-                        result = Err(err); // ToDo:: Validate this path to make sure the scope environment is properly maintined in this..
-                        break;
-                    }
-                }
-            }
-            if !is_condition_truthy {
-                break;
-            }
-            if let Err(err) = self.execute(body) {
-                result = Err(err);
-                break;
-            }
-            if let Some(increment) = increment {
-                if let Err(err) = self.evaluate(increment) {
-                    result = Err(err);
-                    break;
-                }
-            }
-        }
-        // restore the outer scope environment
-        self.environment = self.environment.take().unwrap().take_enclosing();
         result
     }
 

@@ -157,15 +157,15 @@ impl<'a> Parser<'a> {
 
     fn for_statement(&mut self) -> ParserResult<Stmt> {
         self.consume(&TokenType::LEFT_PARAN, "Expect '(' after for")?;
-        let mut initializer = None;
-        if !self.check(&TokenType::SEMICOLON) {
-            initializer = self.declaration().and_then(|stmt| Some(Box::new(stmt)));
+        let initializer;
+        if self.matches(&[TokenType::SEMICOLON]) {
+            initializer = None;
+        } else if self.matches(&[TokenType::VAR]) {
+            initializer = Some(self.var_declaration()?);
         } else {
-            self.consume(
-                &TokenType::SEMICOLON,
-                "Expect ';' when for loop condition is empty",
-            )?;
+            initializer = Some(self.expression_statement()?);
         }
+
         let mut condition = None;
         if !self.check(&TokenType::SEMICOLON) {
             condition = Some(*self.expression()?);
@@ -176,13 +176,33 @@ impl<'a> Parser<'a> {
             increment = Some(*self.expression()?);
         }
         self.consume(&TokenType::RIGHT_PARAN, "Expect  matching ')' in for loop")?;
-        let body = Box::new(self.statement()?);
-        Ok(Stmt::ForStmt {
-            initializer,
-            condition,
-            increment,
-            body,
-        })
+        let mut body = self.statement()?;
+
+        if let Some(increment) = increment {
+            body = Stmt::Block {
+                statements: vec![
+                    body,
+                    Stmt::ExpressionStmt {
+                        expression: increment,
+                    },
+                ],
+            }
+        }
+        if let None = condition {
+            condition = Some(Expr::Litral(LitralValue::True));
+        }
+        body = Stmt::WhileStmt {
+            condition: condition.unwrap(),
+            body: Box::new(body),
+        };
+
+        if let Some(initializer) = initializer {
+            body = Stmt::Block {
+                statements: vec![initializer, body],
+            }
+        }
+
+        Ok(body)
     }
 
     fn block(&mut self) -> ParserResult<Vec<Stmt>> {

@@ -60,10 +60,4 @@ pub enum Stmt {
         condition: Expr,
         body: Box<Stmt>,
     },
-    ForStmt {
-        initializer: Option<Box<Stmt>>,
-        condition: Option<Expr>,
-        increment: Option<Expr>,
-        body: Box<Stmt>,
-    },
 }
