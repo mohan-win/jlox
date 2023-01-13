@@ -116,9 +116,39 @@ impl<'a> Parser<'a> {
             Ok(Stmt::Block { statements })
         } else if self.matches(&[TokenType::PRINT]) {
             self.print_statement()
+        } else if self.matches(&[TokenType::IF]) {
+            self.if_statement()
         } else {
             self.expression_statement()
         }
+    }
+
+    fn if_statement(&mut self) -> ParserResult<Stmt> {
+        self.consume(&TokenType::LEFT_PARAN, "Expect ( after if")?;
+        let condition = self.expression()?;
+        self.consume(&TokenType::RIGHT_PARAN, "Expect ) after if condition")?;
+        let then_branch = self.statement()?;
+
+        let mut else_branch = None;
+        if self.matches(&[TokenType::ELSE]) {
+            else_branch = Some(Box::new(self.statement()?));
+        }
+        Ok(Stmt::IfStmt {
+            condition: *condition,
+            then_branch: Box::new(then_branch),
+            else_branch,
+        })
+    }
+
+    fn block(&mut self) -> ParserResult<Vec<Stmt>> {
+        let mut statements: Vec<Stmt> = Vec::new();
+        while !self.check(&TokenType::RIGHT_BRACE) && !self.is_at_end() {
+            if let Some(stmt) = self.declaration() {
+                statements.push(stmt);
+            }
+        }
+        self.consume(&TokenType::RIGHT_BRACE, "Expect '}' after block")?;
+        Ok(statements)
     }
 
     fn print_statement(&mut self) -> ParserResult<Stmt> {
@@ -131,17 +161,6 @@ impl<'a> Parser<'a> {
         let expr = self.expression()?;
         self.consume(&TokenType::SEMICOLON, "Expect ; after expression")?;
         Ok(Stmt::ExpressionStmt { expression: *expr })
-    }
-
-    fn block(&mut self) -> ParserResult<Vec<Stmt>> {
-        let mut statements: Vec<Stmt> = Vec::new();
-        while !self.check(&TokenType::RIGHT_BRACE) && !self.is_at_end() {
-            if let Some(stmt) = self.declaration() {
-                statements.push(stmt);
-            }
-        }
-        self.consume(&TokenType::RIGHT_BRACE, "Expect '}' after block")?;
-        Ok(statements)
     }
 
     fn expression(&mut self) -> ParserBoxdResult<Expr> {

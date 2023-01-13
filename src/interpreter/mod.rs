@@ -41,12 +41,24 @@ impl Interpreter {
                     .unwrap()
                     .define(&name.lexeme, value)
             }
+            Stmt::ExpressionStmt { expression } => {
+                self.evaluate(expression)?;
+            }
+            Stmt::IfStmt {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                let condition_value = self.evaluate(condition)?;
+                if let RuntimeValue::Boolean(true) = condition_value.is_truthy() {
+                    self.execute(then_branch)?;
+                } else if let Some(else_branch) = else_branch {
+                    self.execute(else_branch)?;
+                }
+            }
             Stmt::PrintStmt { expression } => {
                 let value = self.evaluate(expression)?;
                 println!("{}", value);
-            }
-            Stmt::ExpressionStmt { expression } => {
-                self.evaluate(expression)?;
             }
             Stmt::Block { statements } => {
                 let existing_environment = self.environment.take().unwrap();
