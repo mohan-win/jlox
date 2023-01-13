@@ -49,11 +49,15 @@ impl Interpreter {
                 then_branch,
                 else_branch,
             } => {
-                let condition_value = self.evaluate(condition)?;
-                if let RuntimeValue::Boolean(true) = condition_value.is_truthy() {
+                if bool::from(self.evaluate(condition)?) {
                     self.execute(then_branch)?;
                 } else if let Some(else_branch) = else_branch {
                     self.execute(else_branch)?;
+                }
+            }
+            Stmt::WhileStmt { condition, body } => {
+                if bool::from(self.evaluate(condition)?) {
+                    self.execute(body)?;
                 }
             }
             Stmt::PrintStmt { expression } => {
@@ -129,9 +133,8 @@ impl Interpreter {
                 right,
             } => {
                 let left = self.evaluate(left)?;
-                match (&operator.token_type, left.is_truthy()) {
-                    (&TokenType::OR, RuntimeValue::Boolean(true))
-                    | (&TokenType::AND, RuntimeValue::Boolean(false)) => Ok(left),
+                match (&operator.token_type, bool::from(&left)) {
+                    (&TokenType::OR, true) | (&TokenType::AND, false) => Ok(left),
                     _ => {
                         let right = self.evaluate(right)?;
                         Ok(right)

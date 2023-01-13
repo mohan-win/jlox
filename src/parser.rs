@@ -111,13 +111,15 @@ impl<'a> Parser<'a> {
     }
 
     fn statement(&mut self) -> ParserResult<Stmt> {
-        if self.matches(&[TokenType::LEFT_BRACE]) {
-            let statements = self.block()?;
-            Ok(Stmt::Block { statements })
-        } else if self.matches(&[TokenType::PRINT]) {
+        if self.matches(&[TokenType::PRINT]) {
             self.print_statement()
         } else if self.matches(&[TokenType::IF]) {
             self.if_statement()
+        } else if self.matches(&[TokenType::WHILE]) {
+            self.while_statement()
+        } else if self.matches(&[TokenType::LEFT_BRACE]) {
+            let statements = self.block()?;
+            Ok(Stmt::Block { statements })
         } else {
             self.expression_statement()
         }
@@ -137,6 +139,17 @@ impl<'a> Parser<'a> {
             condition: *condition,
             then_branch: Box::new(then_branch),
             else_branch,
+        })
+    }
+
+    fn while_statement(&mut self) -> ParserResult<Stmt> {
+        self.consume(&TokenType::LEFT_PARAN, "Expect '(' after while")?;
+        let condition = self.expression()?;
+        self.consume(&TokenType::RIGHT_PARAN, "Expect ')' after condition")?;
+        let body = self.statement()?;
+        Ok(Stmt::WhileStmt {
+            condition: *condition,
+            body: Box::new(body),
         })
     }
 

@@ -193,3 +193,23 @@ impl From<LitralValue> for RuntimeValue {
         }
     }
 }
+
+impl From<&RuntimeValue> for bool {
+    fn from(value: &RuntimeValue) -> Self {
+        if let RuntimeValue::Boolean(true) = value.is_truthy() {
+            true
+        } else {
+            false
+        }
+    }
+}
+
+impl From<RuntimeValue> for bool {
+    fn from(value: RuntimeValue) -> Self {
+        if let RuntimeValue::Boolean(true) = value.is_truthy() {
+            true
+        } else {
+            false
+        }
+    }
+}
