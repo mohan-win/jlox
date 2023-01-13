@@ -123,6 +123,21 @@ impl Interpreter {
                 };
                 result.map_err(|e| RuntimeError::new(operator, &e.message))
             }
+            Expr::Logical {
+                left,
+                operator,
+                right,
+            } => {
+                let left = self.evaluate(left)?;
+                match (&operator.token_type, left.is_truthy()) {
+                    (&TokenType::OR, RuntimeValue::Boolean(true))
+                    | (&TokenType::AND, RuntimeValue::Boolean(false)) => Ok(left),
+                    _ => {
+                        let right = self.evaluate(right)?;
+                        Ok(right)
+                    }
+                }
+            }
             Expr::Litral(litral) => Ok(litral.clone().into()),
             Expr::Variable(name) => self.environment.as_ref().unwrap().get(name),
             Expr::Assign { name, value } => {

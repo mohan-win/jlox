@@ -168,7 +168,7 @@ impl<'a> Parser<'a> {
     }
 
     fn assignment(&mut self) -> ParserBoxdResult<Expr> {
-        let expr = self.equality()?;
+        let expr = self.or()?;
 
         if self.matches(&[TokenType::EQUAL]) {
             let equals = self.previous().clone();
@@ -182,6 +182,38 @@ impl<'a> Parser<'a> {
         }
 
         return Ok(expr);
+    }
+
+    fn or(&mut self) -> ParserBoxdResult<Expr> {
+        let left = self.and()?;
+
+        if self.matches(&[TokenType::OR]) {
+            let operator = self.previous().clone();
+            let right = self.and()?;
+            Ok(Box::new(Expr::Logical {
+                left,
+                operator,
+                right,
+            }))
+        } else {
+            Ok(left)
+        }
+    }
+
+    fn and(&mut self) -> ParserBoxdResult<Expr> {
+        let left = self.equality()?;
+
+        if self.matches(&[TokenType::AND]) {
+            let operator = self.previous().clone();
+            let right = self.equality()?;
+            Ok(Box::new(Expr::Logical {
+                left,
+                operator,
+                right,
+            }))
+        } else {
+            Ok(left)
+        }
     }
 
     fn equality(&mut self) -> ParserBoxdResult<Expr> {
