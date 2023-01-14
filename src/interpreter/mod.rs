@@ -127,6 +127,18 @@ impl Interpreter {
                 };
                 result.map_err(|e| RuntimeError::new(operator, &e.message))
             }
+            Expr::Ternary {
+                condition,
+                truthy_branch,
+                falsy_branch,
+            } => {
+                let condition = self.evaluate(condition)?;
+                if bool::from(condition) {
+                    self.evaluate(truthy_branch)
+                } else {
+                    self.evaluate(falsy_branch)
+                }
+            }
             Expr::Logical {
                 left,
                 operator,

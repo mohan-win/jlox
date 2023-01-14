@@ -233,7 +233,7 @@ impl<'a> Parser<'a> {
     }
 
     fn assignment(&mut self) -> ParserBoxdResult<Expr> {
-        let expr = self.or()?;
+        let expr = self.ternary()?;
 
         if self.matches(&[TokenType::EQUAL]) {
             let equals = self.previous().clone();
@@ -247,6 +247,23 @@ impl<'a> Parser<'a> {
         }
 
         return Ok(expr);
+    }
+
+    fn ternary(&mut self) -> ParserBoxdResult<Expr> {
+        let expr = self.or()?;
+
+        if self.matches(&[TokenType::QUESTION]) {
+            let truthy_branch = self.ternary()?;
+            self.consume(&TokenType::COLON, "Expect ':' after condition")?;
+            let falsy_branch = self.ternary()?;
+            Ok(Box::new(Expr::Ternary {
+                condition: expr,
+                truthy_branch,
+                falsy_branch,
+            }))
+        } else {
+            Ok(expr)
+        }
     }
 
     fn or(&mut self) -> ParserBoxdResult<Expr> {

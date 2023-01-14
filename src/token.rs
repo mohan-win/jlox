@@ -14,6 +14,8 @@ pub enum TokenType {
     SEMICOLON,
     SLASH,
     STAR,
+    QUESTION,
+    COLON,
 
     // On or two charactor token
     BANG,

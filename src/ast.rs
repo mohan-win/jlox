@@ -22,6 +22,11 @@ pub enum Expr {
         operator: Token,
         right: Box<Expr>,
     },
+    Ternary {
+        condition: Box<Expr>,
+        truthy_branch: Box<Expr>,
+        falsy_branch: Box<Expr>,
+    },
     Logical {
         left: Box<Expr>,
         operator: Token,
