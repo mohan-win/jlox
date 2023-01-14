@@ -56,7 +56,7 @@ impl Interpreter {
                 }
             }
             Stmt::WhileStmt { condition, body } => {
-                if bool::from(self.evaluate(condition)?) {
+                while bool::from(self.evaluate(condition)?) {
                     self.execute(body)?;
                 }
             }
