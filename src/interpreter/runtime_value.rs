@@ -1,4 +1,4 @@
-use super::runtime_error::{RuntimeError, RuntimeResult};
+use super::interpreter_error::{RuntimeError, RuntimeResult};
 use crate::ast::LitralValue;
 use std::cmp::{Ordering, PartialOrd};
 use std::fmt;

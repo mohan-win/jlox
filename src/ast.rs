@@ -45,6 +45,9 @@ pub enum Stmt {
     PrintStmt {
         expression: Expr,
     },
+    BreakStmt {
+        token: Token,
+    },
     ExpressionStmt {
         expression: Expr,
     },

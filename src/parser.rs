@@ -21,7 +21,7 @@ impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> Vec<Stmt> {
         let mut statements: Vec<Stmt> = Vec::new();
         while !self.is_at_end() {
-            let stmt = self.declaration();
+            let stmt = self.declaration(false);
             if let Some(stmt) = stmt {
                 statements.push(stmt);
             }
@@ -79,11 +79,11 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn declaration(&mut self) -> Option<Stmt> {
+    fn declaration(&mut self, inside_loop: bool) -> Option<Stmt> {
         let stmt = if self.matches(&[TokenType::VAR]) {
             self.var_declaration()
         } else {
-            self.statement()
+            self.statement(inside_loop)
         };
 
         if let Err(parse_err) = stmt {
@@ -110,32 +110,44 @@ impl<'a> Parser<'a> {
         Ok(Stmt::Var { name, expression })
     }
 
-    fn statement(&mut self) -> ParserResult<Stmt> {
+    fn statement(&mut self, inside_loop: bool) -> ParserResult<Stmt> {
         if self.matches(&[TokenType::PRINT]) {
             self.print_statement()
+        } else if self.matches(&[TokenType::BREAK]) {
+            self.consume(&TokenType::SEMICOLON, "Expect ';' after break")?;
+            if !inside_loop {
+                Err(ParserError::new(
+                    self.peek(),
+                    "break statement should be used with-in a loop",
+                ))
+            } else {
+                Ok(Stmt::BreakStmt {
+                    token: self.peek().clone(),
+                })
+            }
         } else if self.matches(&[TokenType::IF]) {
-            self.if_statement()
+            self.if_statement(inside_loop)
         } else if self.matches(&[TokenType::WHILE]) {
             self.while_statement()
         } else if self.matches(&[TokenType::FOR]) {
             self.for_statement()
         } else if self.matches(&[TokenType::LEFT_BRACE]) {
-            let statements = self.block()?;
+            let statements = self.block(inside_loop)?;
             Ok(Stmt::Block { statements })
         } else {
             self.expression_statement()
         }
     }
 
-    fn if_statement(&mut self) -> ParserResult<Stmt> {
+    fn if_statement(&mut self, inside_loop: bool) -> ParserResult<Stmt> {
         self.consume(&TokenType::LEFT_PARAN, "Expect ( after if")?;
         let condition = self.expression()?;
         self.consume(&TokenType::RIGHT_PARAN, "Expect ) after if condition")?;
-        let then_branch = self.statement()?;
+        let then_branch = self.statement(inside_loop)?;
 
         let mut else_branch = None;
         if self.matches(&[TokenType::ELSE]) {
-            else_branch = Some(Box::new(self.statement()?));
+            else_branch = Some(Box::new(self.statement(inside_loop)?));
         }
         Ok(Stmt::IfStmt {
             condition: *condition,
@@ -148,7 +160,7 @@ impl<'a> Parser<'a> {
         self.consume(&TokenType::LEFT_PARAN, "Expect '(' after while")?;
         let condition = self.expression()?;
         self.consume(&TokenType::RIGHT_PARAN, "Expect ')' after condition")?;
-        let body = self.statement()?;
+        let body = self.statement(true)?; // Note: pass (inside_loop to true)
         Ok(Stmt::WhileStmt {
             condition: *condition,
             body: Box::new(body),
@@ -176,7 +188,7 @@ impl<'a> Parser<'a> {
             increment = Some(*self.expression()?);
         }
         self.consume(&TokenType::RIGHT_PARAN, "Expect  matching ')' in for loop")?;
-        let mut body = self.statement()?;
+        let mut body = self.statement(true)?; // Note: pass (inside_loop to true)
 
         if let Some(increment) = increment {
             body = Stmt::Block {
@@ -205,10 +217,10 @@ impl<'a> Parser<'a> {
         Ok(body)
     }
 
-    fn block(&mut self) -> ParserResult<Vec<Stmt>> {
+    fn block(&mut self, inside_loop: bool) -> ParserResult<Vec<Stmt>> {
         let mut statements: Vec<Stmt> = Vec::new();
         while !self.check(&TokenType::RIGHT_BRACE) && !self.is_at_end() {
-            if let Some(stmt) = self.declaration() {
+            if let Some(stmt) = self.declaration(inside_loop) {
                 statements.push(stmt);
             }
         }

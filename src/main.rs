@@ -65,6 +65,6 @@ fn run(source: String, interpreter: &mut Interpreter) {
     let expr = parser.parse();
     //println!("{:#?}", expr);
     if let Err(err) = interpreter.interpret(&expr) {
-        error_at_runtime(&err);
+        error_at_runtime(err);
     }
 }

@@ -1,4 +1,6 @@
-use crate::{interpreter::runtime_error::RuntimeError, parser::ParserError, token::TokenType};
+use crate::{
+    interpreter::interpreter_error::InterpreterError, parser::ParserError, token::TokenType,
+};
 
 pub fn error(line: usize, message: &str) {
     report(line, "", message)
@@ -20,13 +22,6 @@ pub fn report(line: usize, where_in: &str, message: &str) {
     eprintln!("[Line {}] Error {}: {}", line, where_in, message)
 }
 
-pub fn error_at_runtime(err: &RuntimeError) {
-    if let Some(token) = &err.token {
-        eprintln!(
-            "Runtime error: [Line {} on {:?}] {}",
-            token.line, token.token_type, err.message
-        );
-    } else {
-        eprintln!("Runtime error: {}", err.message);
-    }
+pub fn error_at_runtime(err: Box<dyn InterpreterError>) {
+    eprintln!("Runtime error: {}", err);
 }

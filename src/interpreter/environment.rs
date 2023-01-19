@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::token::Token;
 
 use super::{
-    runtime_error::{RuntimeError, RuntimeResult},
+    interpreter_error::{RuntimeError, RuntimeResult},
     runtime_value::RuntimeValue,
 };
 

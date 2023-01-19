@@ -4,12 +4,14 @@ use crate::{
 };
 
 pub mod environment;
-pub mod runtime_error;
+pub mod interpreter_error;
 pub mod runtime_value;
 
 use self::{
     environment::Environment,
-    runtime_error::{RuntimeError, RuntimeResult},
+    interpreter_error::{
+        EarlyReturn, EarlyReturnReason, InterpreterError, RuntimeError, RuntimeResult,
+    },
     runtime_value::RuntimeValue,
 };
 
@@ -30,7 +32,16 @@ impl Interpreter {
     }
 
     fn execute(&mut self, statement: &Stmt) -> RuntimeResult<()> {
-        match statement {
+        let result = match statement {
+            Stmt::PrintStmt { expression } => {
+                let value = self.evaluate(expression)?;
+                println!("{}", value);
+                Ok(())
+            }
+            Stmt::BreakStmt { token } => {
+                Err(EarlyReturn::new(token, &EarlyReturnReason::BreakFromLoop)
+                    as Box<dyn InterpreterError>)
+            }
             Stmt::Var { name, expression } => {
                 let mut value = RuntimeValue::Nil;
                 if let Some(expression) = expression {
@@ -39,10 +50,12 @@ impl Interpreter {
                 self.environment
                     .as_mut()
                     .unwrap()
-                    .define(&name.lexeme, value)
+                    .define(&name.lexeme, value);
+                Ok(())
             }
             Stmt::ExpressionStmt { expression } => {
                 self.evaluate(expression)?;
+                Ok(())
             }
             Stmt::IfStmt {
                 condition,
@@ -54,22 +67,28 @@ impl Interpreter {
                 } else if let Some(else_branch) = else_branch {
                     self.execute(else_branch)?;
                 }
+                Ok(())
             }
             Stmt::WhileStmt { condition, body } => {
                 while bool::from(self.evaluate(condition)?) {
-                    self.execute(body)?;
+                    let result = self.execute(body);
+                    if let Err(err) = result {
+                        if let Some(EarlyReturnReason::BreakFromLoop) = err.early_return_reason() {
+                            break;
+                        } else {
+                            return Err(err);
+                        }
+                    }
                 }
-            }
-            Stmt::PrintStmt { expression } => {
-                let value = self.evaluate(expression)?;
-                println!("{}", value);
+                Ok(())
             }
             Stmt::Block { statements } => {
                 let existing_environment = self.environment.take().unwrap();
                 self.execute_block(statements, Environment::new_with(existing_environment))?;
+                Ok(())
             }
-        }
-        Ok(())
+        };
+        result
     }
 
     fn execute_block(
@@ -123,9 +142,13 @@ impl Interpreter {
                     TokenType::LESS_EQUAL => Ok(RuntimeValue::Boolean(left <= right)),
                     TokenType::BANG_EQUAL => !RuntimeValue::Boolean(left == right),
                     TokenType::EQUAL_EQUAL => Ok(RuntimeValue::Boolean(left == right)),
-                    _ => Err(RuntimeError::new(operator, "Unsupported operator")),
+                    _ => {
+                        let err: Box<dyn InterpreterError> =
+                            RuntimeError::new(operator, "Unsupported operator");
+                        Err(err)
+                    }
                 };
-                result.map_err(|e| RuntimeError::new(operator, &e.message))
+                result
             }
             Expr::Logical {
                 left,
