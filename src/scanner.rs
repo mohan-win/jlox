@@ -268,6 +268,7 @@ impl Scanner {
 fn KEYWORDS() -> HashMap<&'static str, TokenType> {
     let keywords: HashMap<&'static str, TokenType> = [
         ("and", TokenType::AND),
+        ("break", TokenType::BREAK),
         ("class", TokenType::CLASS),
         ("else", TokenType::ELSE),
         ("false", TokenType::FALSE),
