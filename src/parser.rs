@@ -114,13 +114,13 @@ impl<'a> Parser<'a> {
         if self.matches(&[TokenType::PRINT]) {
             self.print_statement()
         } else if self.matches(&[TokenType::BREAK]) {
-            self.consume(&TokenType::SEMICOLON, "Expect ';' after break")?;
             if !inside_loop {
                 Err(ParserError::new(
                     self.peek(),
                     "break statement should be used with-in a loop",
                 ))
             } else {
+                self.consume(&TokenType::SEMICOLON, "Expect ';' after break")?;
                 Ok(Stmt::BreakStmt {
                     token: self.peek().clone(),
                 })
