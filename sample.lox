@@ -2,6 +2,10 @@ var a = 0;
 var t;
 var b;
 
+{
+  break;
+}
+
 for (b = 1; a < 10000; b = t + b) {
   print a;
   t = a;
@@ -12,6 +16,11 @@ for (b = 1; a < 10000; b = t + b) {
       break;
     }
   }
+}
+
+if (true)
+{
+  break;
 }
 
 print true and a >= 10000 or "hi";

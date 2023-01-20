@@ -114,17 +114,15 @@ impl<'a> Parser<'a> {
         if self.matches(&[TokenType::PRINT]) {
             self.print_statement()
         } else if self.matches(&[TokenType::BREAK]) {
+            let token = self.previous().clone();
             if !inside_loop {
-                Err(ParserError::new(
-                    self.peek(),
+                error_in_parser(&ParserError::new(
+                    &token,
                     "break statement should be used with-in a loop",
                 ))
-            } else {
-                self.consume(&TokenType::SEMICOLON, "Expect ';' after break")?;
-                Ok(Stmt::BreakStmt {
-                    token: self.peek().clone(),
-                })
             }
+            self.consume(&TokenType::SEMICOLON, "Expect ';' after break")?;
+            Ok(Stmt::BreakStmt { token })
         } else if self.matches(&[TokenType::IF]) {
             self.if_statement(inside_loop)
         } else if self.matches(&[TokenType::WHILE]) {
