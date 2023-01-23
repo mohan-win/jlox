@@ -1,11 +1,33 @@
-var a = 0;
-var t;
+var a = 1;
 var b;
 
-for (b = 1; a < 10000; b = t + b) {
+{
+  b = 11;
+  var c = 20;
+  {
+    var a = 101;
+    var b = 102;
+    c = a + b;
+
+    print "a 101";
+    print a;
+    print "c 203";
+    print c;
+    print "b = 102";
+    print b;
+  }
+
+  print "a 1";
   print a;
-  t = a;
-  a = b;
+  print "b 11";
+  print b;
+  print "c 203";
+  print c;
 }
 
-print true and a >= 10000 or "hi";
+print "a 1";
+print a;
+print "b 11";
+print b;
+
+print clock();

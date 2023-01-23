@@ -11,6 +11,7 @@ pub mod runtime_value;
 
 use self::{
     environment::Environment,
+    native_functions::NativeFnClock,
     runtime_error::{RuntimeError, RuntimeResult},
     runtime_value::RuntimeValue,
 };
@@ -22,13 +23,23 @@ pub struct Interpreter {
 
 impl Interpreter {
     pub fn new() -> Interpreter {
-        let globals = Rc::new(RefCell::new(Environment::new()));
+        let globals = Interpreter::define_globals();
         let globals_clone = Rc::clone(&globals);
         Interpreter {
             globals,
             environment: Some(globals_clone),
         }
     }
+
+    fn define_globals() -> Rc<RefCell<Environment>> {
+        let environment = Rc::new(RefCell::new(Environment::new()));
+        let clock = Rc::new(NativeFnClock {});
+        (*environment)
+            .borrow_mut()
+            .define("clock", RuntimeValue::Function(clock));
+        environment
+    }
+
     pub fn interpret(&mut self, statements: &Vec<Stmt>) -> RuntimeResult<()> {
         statements
             .iter()
