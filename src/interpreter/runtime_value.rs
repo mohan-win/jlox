@@ -1,8 +1,14 @@
 use super::runtime_error::{RuntimeError, RuntimeResult};
 use crate::ast::LitralValue;
 use std::cmp::{Ordering, PartialOrd};
-use std::fmt;
+use std::fmt::{self, Debug};
 use std::ops::{Add, Div, Mul, Neg, Not, Sub};
+use std::rc::Rc;
+
+pub trait LoxCallable: Debug {
+    fn arity(&self) -> usize;
+    fn call(&self, arguments: Vec<RuntimeValue>) -> RuntimeResult;
+}
 
 #[derive(Clone)]
 pub enum RuntimeValue {
@@ -10,6 +16,7 @@ pub enum RuntimeValue {
     String(String),
     Boolean(bool),
     Nil,
+    Function(Rc<dyn LoxCallable>),
 }
 
 impl Neg for RuntimeValue {
@@ -178,6 +185,7 @@ impl fmt::Display for RuntimeValue {
             Number(value) => write!(f, "{}", value),
             String(value) => write!(f, "{}", value),
             Boolean(value) => write!(f, "{}", value),
+            Function(ptr) => write!(f, "{:?}", ptr),
         }
     }
 }
