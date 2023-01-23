@@ -1,6 +1,6 @@
 use crate::{
     ast::{Expr, Stmt},
-    token::TokenType,
+    token::{Token, TokenType},
 };
 
 pub mod environment;
@@ -147,6 +147,50 @@ impl Interpreter {
                 let value = self.evaluate(value)?;
                 self.environment.as_mut().unwrap().assign(name, value)
             }
+            Expr::Call {
+                callee,
+                paran,
+                arguments,
+            } => self.evaluate_function_call(callee, paran, arguments),
+        }
+    }
+
+    fn evaluate_function_call(
+        &mut self,
+        callee: &Box<Expr>,
+        paran: &Token,
+        arguments: &Vec<Expr>,
+    ) -> RuntimeResult {
+        if let RuntimeValue::Function(function) = self.evaluate(callee)? {
+            let mut argument_vals = Vec::new();
+            if function.arity() != arguments.len() {
+                Err(RuntimeError::new(
+                    paran,
+                    format!(
+                        "Expected: {} arguments, but given {} arguments",
+                        function.arity(),
+                        arguments.len()
+                    )
+                    .as_str(),
+                ))
+            } else {
+                arguments
+                    .iter()
+                    .try_for_each(|argument| match self.evaluate(argument) {
+                        Ok(argument_val) => {
+                            argument_vals.push(argument_val);
+                            Ok(())
+                        }
+                        Err(err) => Err(err),
+                    })?;
+
+                function.call(self, argument_vals)
+            }
+        } else {
+            Err(RuntimeError::new(
+                paran,
+                "Only functions and classes are callable",
+            ))
         }
     }
 }

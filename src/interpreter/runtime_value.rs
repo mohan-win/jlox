@@ -1,4 +1,5 @@
 use super::runtime_error::{RuntimeError, RuntimeResult};
+use super::Interpreter;
 use crate::ast::LitralValue;
 use std::cmp::{Ordering, PartialOrd};
 use std::fmt::{self, Debug};
@@ -7,7 +8,7 @@ use std::rc::Rc;
 
 pub trait LoxCallable: Debug {
     fn arity(&self) -> usize;
-    fn call(&self, arguments: Vec<RuntimeValue>) -> RuntimeResult;
+    fn call(&self, interpreter: &Interpreter, arguments: Vec<RuntimeValue>) -> RuntimeResult;
 }
 
 #[derive(Clone)]

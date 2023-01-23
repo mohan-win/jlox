@@ -383,11 +383,11 @@ impl<'a> Parser<'a> {
         self.consume(
             &TokenType::RIGHT_PARAN,
             "Expect ')' at the end of function call",
-        );
+        )?;
 
         Ok(Box::new(Expr::Call {
             callee,
-            paren: self.previous().clone(),
+            paran: self.previous().clone(),
             arguments,
         }))
     }
