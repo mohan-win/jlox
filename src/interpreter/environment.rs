@@ -1,4 +1,5 @@
-use std::collections::HashMap;
+use std::rc::Rc;
+use std::{cell::RefCell, collections::HashMap};
 
 use crate::token::Token;
 
@@ -9,7 +10,7 @@ use super::{
 
 pub struct Environment {
     values: HashMap<String, RuntimeValue>,
-    enclosing: Option<Box<Environment>>,
+    enclosing: Option<Rc<RefCell<Environment>>>,
 }
 
 impl Environment {
@@ -20,7 +21,7 @@ impl Environment {
         }
     }
     /// instantate environment with an `outer_scope` environment
-    pub fn new_with(outer_scope: Box<Environment>) -> Environment {
+    pub fn new_with(outer_scope: Rc<RefCell<Environment>>) -> Environment {
         Environment {
             values: HashMap::new(),
             enclosing: Some(outer_scope),
@@ -38,7 +39,7 @@ impl Environment {
                     name,
                     format!("Undefined variable \"{}\".", name.lexeme).as_str(),
                 )),
-                |encosing| encosing.get(name),
+                |enclosing| (**enclosing).borrow().get(name),
             )
         }
     }
@@ -52,12 +53,12 @@ impl Environment {
                     name,
                     format!("Variable {} is not declared", name.lexeme).as_str(),
                 )),
-                |enclosing| enclosing.assign(name, value),
+                |enclosing| enclosing.borrow_mut().assign(name, value),
             )
         }
     }
 
-    pub fn take_enclosing(&mut self) -> Option<Box<Environment>> {
+    pub fn take_enclosing(&mut self) -> Option<Rc<RefCell<Environment>>> {
         self.enclosing.take()
     }
 }

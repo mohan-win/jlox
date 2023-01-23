@@ -2,8 +2,10 @@ use crate::{
     ast::{Expr, Stmt},
     token::{Token, TokenType},
 };
+use std::{cell::RefCell, rc::Rc};
 
 pub mod environment;
+pub mod native_functions;
 pub mod runtime_error;
 pub mod runtime_value;
 
@@ -14,13 +16,17 @@ use self::{
 };
 
 pub struct Interpreter {
-    environment: Option<Box<Environment>>,
+    globals: Rc<RefCell<Environment>>,
+    environment: Option<Rc<RefCell<Environment>>>,
 }
 
 impl Interpreter {
     pub fn new() -> Interpreter {
+        let globals = Rc::new(RefCell::new(Environment::new()));
+        let globals_clone = Rc::clone(&globals);
         Interpreter {
-            environment: Some(Box::new(Environment::new())),
+            globals,
+            environment: Some(globals_clone),
         }
     }
     pub fn interpret(&mut self, statements: &Vec<Stmt>) -> RuntimeResult<()> {
@@ -39,6 +45,7 @@ impl Interpreter {
                 self.environment
                     .as_mut()
                     .unwrap()
+                    .borrow_mut()
                     .define(&name.lexeme, value)
             }
             Stmt::ExpressionStmt { expression } => {
@@ -78,14 +85,19 @@ impl Interpreter {
         block_environment: Environment,
     ) -> RuntimeResult<()> {
         // set block environment
-        self.environment = Some(Box::new(block_environment));
+        self.environment = Some(Rc::new(RefCell::new(block_environment)));
 
         let result = statements
             .iter()
             .try_for_each(|statement| self.execute(statement));
 
         // restore enclosing block;
-        self.environment = self.environment.take().unwrap().take_enclosing();
+        self.environment = self
+            .environment
+            .take()
+            .unwrap()
+            .borrow_mut()
+            .take_enclosing();
 
         result
     }
@@ -142,10 +154,14 @@ impl Interpreter {
                 }
             }
             Expr::Litral(litral) => Ok(litral.clone().into()),
-            Expr::Variable(name) => self.environment.as_ref().unwrap().get(name),
+            Expr::Variable(name) => self.environment.as_ref().unwrap().borrow().get(name),
             Expr::Assign { name, value } => {
                 let value = self.evaluate(value)?;
-                self.environment.as_mut().unwrap().assign(name, value)
+                self.environment
+                    .as_mut()
+                    .unwrap()
+                    .borrow_mut()
+                    .assign(name, value)
             }
             Expr::Call {
                 callee,
