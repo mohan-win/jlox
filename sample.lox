@@ -34,11 +34,16 @@ print b;
 print clock() - t0;
 
 fun max(a, b) {
-  if (a < b) { 
-    return b;
-  } else {
-    return a;
-  }
+  print a + b;
 }
+
+max("hello", "world");
+
+print "a 1";
+print a;
+print "b 11";
+print b;
+
+
 
 /* ToDo:: understand how native function works */
