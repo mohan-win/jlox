@@ -264,9 +264,10 @@ impl<'a> Parser<'a> {
     fn return_statement(&mut self) -> ParserResult<Stmt> {
         let keyword = self.previous().clone();
         let mut value = None;
-        if !self.matches(&[TokenType::SEMICOLON]) {
+        if !self.check(&TokenType::SEMICOLON) {
             value = Some(*self.expression()?);
         }
+        self.consume(&TokenType::SEMICOLON, "Expect ';' after return value")?;
 
         Ok(Stmt::Return { keyword, value })
     }
