@@ -2,7 +2,7 @@ use std::fmt;
 use std::time::SystemTime;
 
 use super::{
-    runtime_error::{RuntimeError, RuntimeResult},
+    interpreter_error::{RuntimeError, RuntimeResult},
     runtime_value::{LoxCallable, RuntimeValue},
     Interpreter,
 };

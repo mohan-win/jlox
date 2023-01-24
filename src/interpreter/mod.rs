@@ -5,16 +5,18 @@ use crate::{
 use std::{cell::RefCell, rc::Rc};
 
 pub mod environment;
+pub mod interpreter_error;
 pub mod lox_function;
 pub mod native_functions;
-pub mod runtime_error;
 pub mod runtime_value;
 
 use self::{
     environment::Environment,
+    interpreter_error::{
+        EarlyReturn, EarlyReturnReason, InterpreterError, RuntimeError, RuntimeResult,
+    },
     lox_function::LoxFunction,
     native_functions::NativeFnClock,
-    runtime_error::{RuntimeError, RuntimeResult},
     runtime_value::RuntimeValue,
 };
 
@@ -84,6 +86,22 @@ impl Interpreter {
             Stmt::PrintStmt { expression } => {
                 let value = self.evaluate(expression)?;
                 println!("{}", value);
+            }
+            Stmt::Return { keyword, value } => {
+                if let Some(value) = value {
+                    let return_value = self.evaluate(value)?;
+                    return Err(EarlyReturn::new(
+                        keyword,
+                        EarlyReturnReason::ReturnFromFunction { return_value },
+                    ));
+                } else {
+                    return Err(EarlyReturn::new(
+                        keyword,
+                        EarlyReturnReason::ReturnFromFunction {
+                            return_value: RuntimeValue::Nil,
+                        },
+                    ));
+                }
             }
             Stmt::Block { statements } => {
                 let existing_environment = self.environment.take().unwrap();
@@ -159,9 +177,10 @@ impl Interpreter {
                     TokenType::LESS_EQUAL => Ok(RuntimeValue::Boolean(left <= right)),
                     TokenType::BANG_EQUAL => !RuntimeValue::Boolean(left == right),
                     TokenType::EQUAL_EQUAL => Ok(RuntimeValue::Boolean(left == right)),
-                    _ => Err(RuntimeError::new(operator, "Unsupported operator")),
+                    _ => Err(RuntimeError::new(operator, "Unsupported operator")
+                        as Box<dyn InterpreterError>),
                 };
-                result.map_err(|e| RuntimeError::new(operator, &e.message))
+                result
             }
             Expr::Logical {
                 left,

@@ -173,6 +173,8 @@ impl<'a> Parser<'a> {
             self.while_statement()
         } else if self.matches(&[TokenType::FOR]) {
             self.for_statement()
+        } else if self.matches(&[TokenType::RETURN]) {
+            self.return_statement()
         } else if self.matches(&[TokenType::LEFT_BRACE]) {
             let statements = self.block()?;
             Ok(Stmt::Block { statements })
@@ -257,6 +259,16 @@ impl<'a> Parser<'a> {
         }
 
         Ok(body)
+    }
+
+    fn return_statement(&mut self) -> ParserResult<Stmt> {
+        let keyword = self.previous().clone();
+        let mut value = None;
+        if !self.matches(&[TokenType::SEMICOLON]) {
+            value = Some(*self.expression()?);
+        }
+
+        Ok(Stmt::Return { keyword, value })
     }
 
     fn block(&mut self) -> ParserResult<Vec<Stmt>> {

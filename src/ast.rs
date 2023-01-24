@@ -73,4 +73,8 @@ pub enum Stmt {
         body: Box<Stmt>,
     },
     Function(Fun),
+    Return {
+        keyword: Token,
+        value: Option<Expr>,
+    },
 }

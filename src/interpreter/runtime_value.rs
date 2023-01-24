@@ -1,17 +1,17 @@
-use super::runtime_error::{RuntimeError, RuntimeResult};
+use super::interpreter_error::{RuntimeError, RuntimeResult};
 use super::Interpreter;
 use crate::ast::LitralValue;
 use std::cmp::{Ordering, PartialOrd};
-use std::fmt;
+use std::fmt::{self, Debug};
 use std::ops::{Add, Div, Mul, Neg, Not, Sub};
 use std::rc::Rc;
 
-pub trait LoxCallable: fmt::Display {
+pub trait LoxCallable: fmt::Display + Debug {
     fn arity(&self) -> usize;
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<RuntimeValue>) -> RuntimeResult;
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum RuntimeValue {
     Number(f64),
     String(String),
