@@ -2,13 +2,13 @@ use super::runtime_error::{RuntimeError, RuntimeResult};
 use super::Interpreter;
 use crate::ast::LitralValue;
 use std::cmp::{Ordering, PartialOrd};
-use std::fmt::{self, Debug};
+use std::fmt;
 use std::ops::{Add, Div, Mul, Neg, Not, Sub};
 use std::rc::Rc;
 
-pub trait LoxCallable: Debug {
+pub trait LoxCallable: fmt::Display {
     fn arity(&self) -> usize;
-    fn call(&self, interpreter: &Interpreter, arguments: Vec<RuntimeValue>) -> RuntimeResult;
+    fn call(&self, interpreter: &mut Interpreter, arguments: Vec<RuntimeValue>) -> RuntimeResult;
 }
 
 #[derive(Clone)]
@@ -186,7 +186,7 @@ impl fmt::Display for RuntimeValue {
             Number(value) => write!(f, "{}", value),
             String(value) => write!(f, "{}", value),
             Boolean(value) => write!(f, "{}", value),
-            Function(ptr) => write!(f, "{:?}", ptr),
+            Function(ptr) => write!(f, "{}", ptr),
         }
     }
 }

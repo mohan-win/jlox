@@ -5,15 +5,17 @@ use crate::{
 use std::{cell::RefCell, rc::Rc};
 
 pub mod environment;
+pub mod lox_function;
 pub mod native_functions;
 pub mod runtime_error;
 pub mod runtime_value;
 
 use self::{
     environment::Environment,
+    lox_function::LoxFunction,
     native_functions::NativeFnClock,
     runtime_error::{RuntimeError, RuntimeResult},
-    runtime_value::RuntimeValue,
+    runtime_value::{LoxCallable, RuntimeValue},
 };
 
 pub struct Interpreter {
@@ -56,6 +58,7 @@ impl Interpreter {
                 self.environment
                     .as_mut()
                     .unwrap()
+                    .as_ref()
                     .borrow_mut()
                     .define(&name.lexeme, value)
             }
@@ -86,6 +89,15 @@ impl Interpreter {
                 let existing_environment = self.environment.take().unwrap();
                 self.execute_block(statements, Environment::new_with(existing_environment))?;
             }
+            Stmt::Function(fun) => {
+                let function = Rc::new(LoxFunction::new(fun));
+                self.environment
+                    .as_mut()
+                    .unwrap()
+                    .as_ref()
+                    .borrow_mut()
+                    .define(fun.name.lexeme.as_str(), RuntimeValue::Function(function))
+            }
         }
         Ok(())
     }
@@ -107,6 +119,7 @@ impl Interpreter {
             .environment
             .take()
             .unwrap()
+            .as_ref()
             .borrow_mut()
             .take_enclosing();
 
@@ -171,6 +184,7 @@ impl Interpreter {
                 self.environment
                     .as_mut()
                     .unwrap()
+                    .as_ref()
                     .borrow_mut()
                     .assign(name, value)
             }

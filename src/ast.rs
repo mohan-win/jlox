@@ -9,7 +9,7 @@ pub enum LitralValue {
     Nil,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Expr {
     Litral(LitralValue),
     Variable(Token),
@@ -41,7 +41,14 @@ pub enum Expr {
     },
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
+pub struct Fun {
+    pub name: Token,
+    pub params: Vec<Token>,
+    pub body: Vec<Stmt>,
+}
+
+#[derive(Clone, Debug)]
 pub enum Stmt {
     Var {
         name: Token,
@@ -65,4 +72,5 @@ pub enum Stmt {
         condition: Expr,
         body: Box<Stmt>,
     },
+    Function(Fun),
 }

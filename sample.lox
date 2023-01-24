@@ -1,3 +1,4 @@
+var t0 = clock();
 var a = 1;
 var b;
 
@@ -30,4 +31,14 @@ print a;
 print "b 11";
 print b;
 
-print clock();
+print clock() - t0;
+
+fun max(a, b) {
+  if (a < b) { 
+    return b;
+  } else {
+    return a;
+  }
+}
+
+/* ToDo:: understand how native function works */

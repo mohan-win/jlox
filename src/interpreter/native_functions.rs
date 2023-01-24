@@ -1,3 +1,4 @@
+use std::fmt;
 use std::time::SystemTime;
 
 use super::{
@@ -13,7 +14,7 @@ impl LoxCallable for NativeFnClock {
     fn arity(&self) -> usize {
         0
     }
-    fn call(&self, _interpreter: &Interpreter, arguments: Vec<RuntimeValue>) -> RuntimeResult {
+    fn call(&self, _interpreter: &mut Interpreter, arguments: Vec<RuntimeValue>) -> RuntimeResult {
         if arguments.len() != 0 {
             Err(RuntimeError::new_with_message(
                 "calling native clock requires zero arguments",
@@ -26,5 +27,11 @@ impl LoxCallable for NativeFnClock {
                 )),
             }
         }
+    }
+}
+
+impl fmt::Display for NativeFnClock {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "<native fn clock>")
     }
 }
