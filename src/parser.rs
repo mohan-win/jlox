@@ -11,11 +11,20 @@ use std::fmt;
 pub struct Parser<'a> {
     tokens: &'a Vec<Token>,
     current: usize,
+    num_of_parser_errs: usize,
 }
 
 impl<'a> Parser<'a> {
     pub fn new(tokens: &Vec<Token>) -> Parser {
-        Parser { tokens, current: 0 }
+        Parser {
+            tokens,
+            current: 0,
+            num_of_parser_errs: 0,
+        }
+    }
+
+    pub fn get_num_of_parser_errors(&self) -> usize {
+        self.num_of_parser_errs
     }
 
     pub fn parse(&mut self) -> Vec<Stmt> {
@@ -89,6 +98,7 @@ impl<'a> Parser<'a> {
         };
 
         if let Err(parse_err) = stmt {
+            self.num_of_parser_errs += 1;
             error_in_parser(&parse_err);
             self.synchronize();
             None

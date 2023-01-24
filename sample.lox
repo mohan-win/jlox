@@ -10,6 +10,13 @@ var b;
     var b = 102;
     c = a + b;
 
+    if (true) 
+      fun max(a, b) {
+        print a + b;
+      }
+
+    max("hello", "world");
+
     print "a 101";
     print a;
     print "c 203";
@@ -32,12 +39,6 @@ print "b 11";
 print b;
 
 print clock() - t0;
-
-fun max(a, b) {
-  print a + b;
-}
-
-max("hello", "world");
 
 print "a 1";
 print a;

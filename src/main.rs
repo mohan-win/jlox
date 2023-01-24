@@ -63,8 +63,10 @@ fn run(source: String, interpreter: &mut Interpreter) {
     //println!("{:#?}", tokens);
     let mut parser = Parser::new(tokens);
     let expr = parser.parse();
-    println!("{:#?}", expr);
-    if let Err(err) = interpreter.interpret(&expr) {
-        error_at_runtime(&err);
+    //println!("{:#?}", expr);
+    if parser.get_num_of_parser_errors() == 0 {
+        if let Err(err) = interpreter.interpret(&expr) {
+            error_at_runtime(&err);
+        }
     }
 }
