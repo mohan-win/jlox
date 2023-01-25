@@ -120,7 +120,7 @@ impl Interpreter {
                 self.execute_block(statements, Environment::new_with(existing_environment))?;
             }
             Stmt::Function(fun) => {
-                let function = Rc::new(LoxFunction::new(fun));
+                let function = Rc::new(LoxFunction::new(fun, &self.environment));
                 self.env_define(fun.name.lexeme.as_str(), RuntimeValue::Function(function))
             }
         }
@@ -184,7 +184,12 @@ impl Interpreter {
                     _ => Err(RuntimeError::new(operator, "Unsupported operator")
                         as Box<dyn InterpreterError>),
                 };
-                result
+                result.map_err(|err| {
+                    // Note: add the token to the runtime error, so that error message
+                    // can include the line.
+                    RuntimeError::new(operator, err.message().unwrap_or_default())
+                        as Box<dyn InterpreterError>
+                })
             }
             Expr::Logical {
                 left,

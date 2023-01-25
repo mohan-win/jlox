@@ -17,6 +17,9 @@ pub trait InterpreterError: error::Error {
     fn early_return_reason(&self) -> Option<EarlyReturnReason> {
         None
     }
+    fn message(&self) -> Option<&str> {
+        None
+    }
 }
 
 #[derive(Debug)]
@@ -51,7 +54,11 @@ impl fmt::Display for RuntimeError {
 }
 
 impl error::Error for RuntimeError {}
-impl InterpreterError for RuntimeError {}
+impl InterpreterError for RuntimeError {
+    fn message(&self) -> Option<&str> {
+        Some(self.message.as_str())
+    }
+}
 
 pub type RuntimeResult<T = RuntimeValue> = Result<T, Box<dyn InterpreterError>>;
 

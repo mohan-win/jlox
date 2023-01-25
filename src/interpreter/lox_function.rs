@@ -2,18 +2,21 @@ use super::interpreter_error::EarlyReturnReason;
 use super::{environment::Environment, runtime_value::LoxCallable};
 use super::{interpreter_error::RuntimeResult, runtime_value::RuntimeValue, Interpreter};
 use crate::ast::Fun;
+use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 
 #[derive(Debug)]
 pub struct LoxFunction {
     function: Fun,
+    closure: Rc<RefCell<Environment>>,
 }
 
 impl LoxFunction {
-    pub fn new(function: &Fun) -> LoxFunction {
+    pub fn new(function: &Fun, closure: &Rc<RefCell<Environment>>) -> LoxFunction {
         LoxFunction {
             function: function.clone(),
+            closure: Rc::clone(closure),
         }
     }
 }
@@ -30,7 +33,7 @@ impl<'a> LoxCallable for LoxFunction {
     }
 
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<RuntimeValue>) -> RuntimeResult {
-        let mut environment = Environment::new_with(Rc::clone(&interpreter.globals));
+        let mut environment = Environment::new_with(Rc::clone(&self.closure));
         for (i, arg) in arguments.into_iter().enumerate() {
             let param = &self.function.params[i];
             environment.define(param.lexeme.as_str(), arg)
