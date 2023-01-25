@@ -22,7 +22,7 @@ use self::{
 
 pub struct Interpreter {
     globals: Rc<RefCell<Environment>>,
-    environment: Option<Rc<RefCell<Environment>>>,
+    environment: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
@@ -31,7 +31,7 @@ impl Interpreter {
         let globals_clone = Rc::clone(&globals);
         Interpreter {
             globals,
-            environment: Some(globals_clone),
+            environment: globals_clone,
         }
     }
 
@@ -55,49 +55,15 @@ impl Interpreter {
     */
 
     fn env_get(&self, name: &Token) -> RuntimeResult {
-        self.environment
-            .as_ref()
-            .unwrap()
-            .as_ref()
-            .borrow()
-            .get(name)
+        self.environment.borrow().get(name)
     }
 
     fn env_define(&self, name: &str, value: RuntimeValue) {
-        self.environment
-            .as_ref()
-            .unwrap()
-            .as_ref()
-            .borrow_mut()
-            .define(name, value)
+        self.environment.borrow_mut().define(name, value)
     }
 
     fn env_assign(&self, name: &Token, value: RuntimeValue) -> RuntimeResult {
-        self.environment
-            .as_ref()
-            .unwrap()
-            .as_ref()
-            .borrow_mut()
-            .assign(name, value)
-    }
-
-    fn env_replace_environment(&mut self, environment: Environment) {
-        self.environment = Some(Rc::new(RefCell::new(environment)));
-    }
-
-    fn env_pop_to_enclosing(&mut self) {
-        let env = self
-            .environment
-            .take()
-            .unwrap()
-            .as_ref()
-            .borrow_mut()
-            .take_enclosing();
-        assert!(
-            env.is_some(),
-            "Can't pop to enclosing when enclosing env is None :("
-        );
-        self.environment = env;
+        self.environment.borrow_mut().assign(name, value)
     }
 
     /// Execute statement
@@ -150,7 +116,7 @@ impl Interpreter {
                 }
             }
             Stmt::Block { statements } => {
-                let existing_environment = self.environment.take().unwrap();
+                let existing_environment = Rc::clone(&self.environment);
                 self.execute_block(statements, Environment::new_with(existing_environment))?;
             }
             Stmt::Function(fun) => {
@@ -168,14 +134,15 @@ impl Interpreter {
         block_environment: Environment,
     ) -> RuntimeResult<()> {
         // set block environment
-        self.env_replace_environment(block_environment);
+        let old_environment = Rc::clone(&self.environment);
+        self.environment = Rc::new(RefCell::new(block_environment));
 
         let result = statements
             .iter()
             .try_for_each(|statement| self.execute(statement));
 
-        // restore enclosing block;
-        self.env_pop_to_enclosing();
+        // restore old environment;
+        self.environment = old_environment;
 
         result
     }
