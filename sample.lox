@@ -1,50 +1,7 @@
-var t0 = clock();
-var a = 1;
-var b;
+fun fib(n) {
+  if (n <= 1) return n;
 
-{
-  b = 11;
-  var c = 20;
-  {
-    var a = 101;
-    var b = 102;
-    c = a + b;
-
-    if (true) 
-      fun max(a, b) {
-        print a + b;
-      }
-
-    max("hello", "world");
-
-    print "a 101";
-    print a;
-    print "c 203";
-    print c;
-    print "b = 102";
-    print b;
-  }
-
-  print "a 1";
-  print a;
-  print "b 11";
-  print b;
-  print "c 203";
-  print c;
+  return fib(n-2) + fib(n-1);
 }
 
-print "a 1";
-print a;
-print "b 11";
-print b;
-
-print clock() - t0;
-
-print "a 1";
-print a;
-print "b 11";
-print b;
-
-
-
-/* ToDo:: understand how native function works */
+print fib(2);

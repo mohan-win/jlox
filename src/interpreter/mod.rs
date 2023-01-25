@@ -35,6 +35,12 @@ impl Interpreter {
         }
     }
 
+    pub fn interpret(&mut self, statements: &Vec<Stmt>) -> RuntimeResult<()> {
+        statements
+            .iter()
+            .try_for_each(|statement| self.execute(statement))
+    }
+
     fn define_globals() -> Rc<RefCell<Environment>> {
         let environment = Rc::new(RefCell::new(Environment::new()));
         let clock = Rc::new(NativeFnClock {});
@@ -44,12 +50,57 @@ impl Interpreter {
         environment
     }
 
-    pub fn interpret(&mut self, statements: &Vec<Stmt>) -> RuntimeResult<()> {
-        statements
-            .iter()
-            .try_for_each(|statement| self.execute(statement))
+    /*
+       Helper methods for environment.
+    */
+
+    fn env_get(&self, name: &Token) -> RuntimeResult {
+        self.environment
+            .as_ref()
+            .unwrap()
+            .as_ref()
+            .borrow()
+            .get(name)
     }
 
+    fn env_define(&self, name: &str, value: RuntimeValue) {
+        self.environment
+            .as_ref()
+            .unwrap()
+            .as_ref()
+            .borrow_mut()
+            .define(name, value)
+    }
+
+    fn env_assign(&self, name: &Token, value: RuntimeValue) -> RuntimeResult {
+        self.environment
+            .as_ref()
+            .unwrap()
+            .as_ref()
+            .borrow_mut()
+            .assign(name, value)
+    }
+
+    fn env_replace_environment(&mut self, environment: Environment) {
+        self.environment = Some(Rc::new(RefCell::new(environment)));
+    }
+
+    fn env_pop_to_enclosing(&mut self) {
+        let env = self
+            .environment
+            .take()
+            .unwrap()
+            .as_ref()
+            .borrow_mut()
+            .take_enclosing();
+        assert!(
+            env.is_some(),
+            "Can't pop to enclosing when enclosing env is None :("
+        );
+        self.environment = env;
+    }
+
+    /// Execute statement
     fn execute(&mut self, statement: &Stmt) -> RuntimeResult<()> {
         match statement {
             Stmt::Var { name, expression } => {
@@ -57,12 +108,7 @@ impl Interpreter {
                 if let Some(expression) = expression {
                     value = self.evaluate(expression)?;
                 }
-                self.environment
-                    .as_mut()
-                    .unwrap()
-                    .as_ref()
-                    .borrow_mut()
-                    .define(&name.lexeme, value)
+                self.env_define(&name.lexeme, value)
             }
             Stmt::ExpressionStmt { expression } => {
                 self.evaluate(expression)?;
@@ -109,41 +155,32 @@ impl Interpreter {
             }
             Stmt::Function(fun) => {
                 let function = Rc::new(LoxFunction::new(fun));
-                self.environment
-                    .as_mut()
-                    .unwrap()
-                    .as_ref()
-                    .borrow_mut()
-                    .define(fun.name.lexeme.as_str(), RuntimeValue::Function(function))
+                self.env_define(fun.name.lexeme.as_str(), RuntimeValue::Function(function))
             }
         }
         Ok(())
     }
 
+    /// Helper for executing block
     fn execute_block(
         &mut self,
         statements: &Vec<Stmt>,
         block_environment: Environment,
     ) -> RuntimeResult<()> {
         // set block environment
-        self.environment = Some(Rc::new(RefCell::new(block_environment)));
+        self.env_replace_environment(block_environment);
 
         let result = statements
             .iter()
             .try_for_each(|statement| self.execute(statement));
 
         // restore enclosing block;
-        self.environment = self
-            .environment
-            .take()
-            .unwrap()
-            .as_ref()
-            .borrow_mut()
-            .take_enclosing();
+        self.env_pop_to_enclosing();
 
         result
     }
 
+    /// Helper for evaluating expression
     fn evaluate(&mut self, expr: &Expr) -> RuntimeResult {
         match expr {
             Expr::Grouping { expression } => self.evaluate(expression),
@@ -197,15 +234,10 @@ impl Interpreter {
                 }
             }
             Expr::Litral(litral) => Ok(litral.clone().into()),
-            Expr::Variable(name) => self.environment.as_ref().unwrap().borrow().get(name),
+            Expr::Variable(name) => self.env_get(name),
             Expr::Assign { name, value } => {
                 let value = self.evaluate(value)?;
-                self.environment
-                    .as_mut()
-                    .unwrap()
-                    .as_ref()
-                    .borrow_mut()
-                    .assign(name, value)
+                self.env_assign(name, value)
             }
             Expr::Call {
                 callee,
@@ -215,6 +247,7 @@ impl Interpreter {
         }
     }
 
+    /// Helper for evaluating function call
     fn evaluate_function_call(
         &mut self,
         callee: &Box<Expr>,

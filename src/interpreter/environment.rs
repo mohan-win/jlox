@@ -1,3 +1,4 @@
+use std::fmt;
 use std::rc::Rc;
 use std::{cell::RefCell, collections::HashMap};
 
@@ -8,6 +9,7 @@ use super::{
     runtime_value::RuntimeValue,
 };
 
+#[derive(Debug)]
 pub struct Environment {
     values: HashMap<String, RuntimeValue>,
     enclosing: Option<Rc<RefCell<Environment>>>,
@@ -60,5 +62,13 @@ impl Environment {
 
     pub fn take_enclosing(&mut self) -> Option<Rc<RefCell<Environment>>> {
         self.enclosing.take()
+    }
+}
+
+impl fmt::Display for Environment {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.values
+            .iter()
+            .try_for_each(|value| write!(f, "{} {}", value.0, value.1))
     }
 }
