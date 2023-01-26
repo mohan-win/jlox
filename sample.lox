@@ -1,4 +1,4 @@
-fun thrice(f) {
+fun (f) {
   for(var i = 0; i < 3; i = i + 1) {
     f(i);
   }

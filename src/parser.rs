@@ -422,7 +422,7 @@ impl<'a> Parser<'a> {
 
     fn function(&mut self, kind: FunctionKind) -> ParserResult<Fun> {
         let mut name = None;
-        if !self.check(&TokenType::LEFT_PARAN) {
+        if let FunctionKind::Function = kind {
             name = Some(
                 self.consume(
                     &TokenType::IDENTIFIER,

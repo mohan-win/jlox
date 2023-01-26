@@ -17,7 +17,7 @@ use self::{
     },
     lox_function::LoxFunction,
     native_functions::NativeFnClock,
-    runtime_value::{LoxCallable, RuntimeValue},
+    runtime_value::RuntimeValue,
 };
 
 pub struct Interpreter {
