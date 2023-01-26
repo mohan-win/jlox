@@ -17,7 +17,7 @@ use self::{
     },
     lox_function::LoxFunction,
     native_functions::NativeFnClock,
-    runtime_value::RuntimeValue,
+    runtime_value::{LoxCallable, RuntimeValue},
 };
 
 pub struct Interpreter {
@@ -121,7 +121,13 @@ impl Interpreter {
             }
             Stmt::Function(fun) => {
                 let function = Rc::new(LoxFunction::new(fun, &self.environment));
-                self.env_define(fun.name.lexeme.as_str(), RuntimeValue::Function(function))
+                self.env_define(
+                    &fun.name
+                        .as_ref()
+                        .expect("Function should have a name")
+                        .lexeme,
+                    RuntimeValue::Function(function),
+                )
             }
         }
         Ok(())
@@ -210,6 +216,10 @@ impl Interpreter {
             Expr::Assign { name, value } => {
                 let value = self.evaluate(value)?;
                 self.env_assign(name, value)
+            }
+            Expr::Lamda(fun) => {
+                let function = Rc::new(LoxFunction::new(fun, &self.environment));
+                Ok(RuntimeValue::Function(function))
             }
             Expr::Call {
                 callee,

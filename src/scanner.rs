@@ -272,6 +272,7 @@ fn KEYWORDS() -> HashMap<&'static str, TokenType> {
         ("else", TokenType::ELSE),
         ("false", TokenType::FALSE),
         ("for", TokenType::FOR),
+        ("fn", TokenType::FN),
         ("fun", TokenType::FUN),
         ("if", TokenType::IF),
         ("nil", TokenType::NIL),

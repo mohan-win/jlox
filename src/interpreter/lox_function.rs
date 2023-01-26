@@ -23,7 +23,10 @@ impl LoxFunction {
 
 impl<'a> fmt::Display for LoxFunction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "<fn {}>", self.function.name.lexeme)
+        match &self.function.name {
+            Some(name) => write!(f, "<fun {}>", name),
+            None => write!(f, "<fn anonymous>"),
+        }
     }
 }
 

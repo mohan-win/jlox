@@ -89,10 +89,13 @@ impl<'a> Parser<'a> {
     }
 
     fn declaration(&mut self) -> Option<Stmt> {
-        let stmt = if self.matches(&[TokenType::FUN]) {
-            self.function("function")
-        } else if self.matches(&[TokenType::VAR]) {
+        let stmt = if self.matches(&[TokenType::VAR]) {
             self.var_declaration()
+        } else if self.matches(&[TokenType::FUN]) {
+            match self.function(FunctionKind::Function) {
+                Ok(fun) => Ok(Stmt::Function(fun)),
+                Err(err) => Err(err),
+            }
         } else {
             self.statement()
         };
@@ -105,48 +108,6 @@ impl<'a> Parser<'a> {
         } else {
             stmt.ok()
         }
-    }
-
-    fn function(&mut self, kind: &str) -> ParserResult<Stmt> {
-        let name = self
-            .consume(
-                &TokenType::IDENTIFIER,
-                format!("Expect {} name", kind).as_str(),
-            )?
-            .clone();
-        self.consume(
-            &TokenType::LEFT_PARAN,
-            format!("Expect '(' after {} name", kind).as_str(),
-        )?;
-        let mut params = Vec::new();
-        if !self.check(&TokenType::RIGHT_PARAN) {
-            loop {
-                if params.len() >= 255 {
-                    error_in_parser(&ParserError::new(
-                        self.peek(),
-                        format!("Can't allow more than 255 params for a {}", kind).as_str(),
-                    ))
-                }
-                let param = self.consume(
-                    &TokenType::IDENTIFIER,
-                    format!("Expect {} parameter", kind).as_str(),
-                )?;
-                params.push(param.clone());
-                if !self.matches(&[TokenType::COMMA]) {
-                    break;
-                }
-            }
-        }
-        self.consume(
-            &TokenType::RIGHT_PARAN,
-            format!("Expect ')' after {} parameters", kind).as_str(),
-        )?;
-        self.consume(
-            &TokenType::LEFT_BRACE,
-            format!("Expect '{{' before start of a {} body", kind).as_str(),
-        )?;
-        let body = self.block()?;
-        Ok(Stmt::Function(Fun { name, params, body }))
     }
 
     fn var_declaration(&mut self) -> ParserResult<Stmt> {
@@ -459,6 +420,53 @@ impl<'a> Parser<'a> {
         }))
     }
 
+    fn function(&mut self, kind: FunctionKind) -> ParserResult<Fun> {
+        let mut name = None;
+        if !self.check(&TokenType::LEFT_PARAN) {
+            name = Some(
+                self.consume(
+                    &TokenType::IDENTIFIER,
+                    format!("Expect {:?} name", kind).as_str(),
+                )?
+                .clone(),
+            );
+        }
+
+        self.consume(
+            &TokenType::LEFT_PARAN,
+            format!("Expect '(' after {:?} name", kind).as_str(),
+        )?;
+        let mut params = Vec::new();
+        if !self.check(&TokenType::RIGHT_PARAN) {
+            loop {
+                if params.len() >= 255 {
+                    error_in_parser(&ParserError::new(
+                        self.peek(),
+                        format!("Can't allow more than 255 params for a {:?}", kind).as_str(),
+                    ))
+                }
+                let param = self.consume(
+                    &TokenType::IDENTIFIER,
+                    format!("Expect {:?} parameter", kind).as_str(),
+                )?;
+                params.push(param.clone());
+                if !self.matches(&[TokenType::COMMA]) {
+                    break;
+                }
+            }
+        }
+        self.consume(
+            &TokenType::RIGHT_PARAN,
+            format!("Expect ')' after {:?} parameters", kind).as_str(),
+        )?;
+        self.consume(
+            &TokenType::LEFT_BRACE,
+            format!("Expect '{{' before start of a {:?} body", kind).as_str(),
+        )?;
+        let body = self.block()?;
+        Ok(Fun { name, params, body })
+    }
+
     fn primary(&mut self) -> ParserBoxdResult<Expr> {
         use Expr::*;
         use TokenType::*;
@@ -480,6 +488,9 @@ impl<'a> Parser<'a> {
             let expr = self.expression()?;
             self.consume(&TokenType::RIGHT_PARAN, "Expect ) after expression")?;
             Ok(Box::new(Expr::Grouping { expression: expr }))
+        } else if self.matches(&[TokenType::FN]) {
+            let lamda = self.function(FunctionKind::Lamda)?;
+            Ok(Box::new(Expr::Lamda(lamda)))
         } else {
             self.advance();
             Err(ParserError::new(
@@ -540,3 +551,10 @@ impl Error for ParserError {}
 
 pub type ParserResult<T> = Result<T, ParserError>;
 pub type ParserBoxdResult<T> = ParserResult<Box<T>>;
+
+#[derive(Debug)]
+enum FunctionKind {
+    Function,
+    Lamda,
+    Method,
+}

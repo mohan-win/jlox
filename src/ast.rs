@@ -39,11 +39,12 @@ pub enum Expr {
         paran: Token,
         arguments: Vec<Expr>,
     },
+    Lamda(Fun),
 }
 
 #[derive(Clone, Debug)]
 pub struct Fun {
-    pub name: Token,
+    pub name: Option<Token>,
     pub params: Vec<Token>,
     pub body: Vec<Stmt>,
 }
@@ -72,9 +73,9 @@ pub enum Stmt {
         condition: Expr,
         body: Box<Stmt>,
     },
-    Function(Fun),
     Return {
         keyword: Token,
         value: Option<Expr>,
     },
+    Function(Fun),
 }

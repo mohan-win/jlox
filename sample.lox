@@ -1,13 +1,10 @@
-fun makeCounter() {
-  var i;
-  fun count() {
-    i = i + 1;
-    print i;
+fun thrice(f) {
+  for(var i = 0; i < 3; i = i + 1) {
+    f(i);
   }
-
-  return count;
 }
 
-var counter = makeCounter();
-counter();
-counter();
+thrice(fn (a) {
+  print a;
+});
+
