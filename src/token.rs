@@ -1,5 +1,7 @@
-use std::{fmt::Display, mem::discriminant};
-#[derive(Debug, Clone)]
+use core::cmp;
+use core::hash::Hash;
+use std::fmt::Display;
+#[derive(PartialEq, Debug, Clone)]
 #[allow(non_camel_case_types)]
 pub enum TokenType {
     // Single charactor token
@@ -51,9 +53,11 @@ pub enum TokenType {
     EOF,
 }
 
-impl PartialEq for TokenType {
-    fn eq(&self, other: &Self) -> bool {
-        discriminant(self) == discriminant(other)
+impl cmp::Eq for TokenType {}
+
+impl Hash for TokenType {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        
     }
 }
 

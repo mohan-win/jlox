@@ -306,8 +306,12 @@ impl<'a> Parser<'a> {
             let equals = self.previous().clone();
             let value = self.assignment()?;
 
-            if let Expr::Variable(token) = *expr {
-                return Ok(Box::new(Expr::Assign { name: token, value }));
+            if let Expr::Variable { name: token, .. } = *expr {
+                return Ok(Box::new(Expr::Assign {
+                    name: token,
+                    depth: None,
+                    value,
+                }));
             } else {
                 error_in_parser(&ParserError::new(&equals, "Invalid assignment target"));
             }
@@ -469,7 +473,10 @@ impl<'a> Parser<'a> {
             NIL => Some(Litral(LitralValue::Nil)),
             NUMBER { litral } => Some(Litral(LitralValue::NUMBER(litral.clone()))),
             STRING { litral } => Some(Litral(LitralValue::STRING(litral.clone()))),
-            IDENTIFIER => Some(Expr::Variable(self.peek().clone())),
+            IDENTIFIER => Some(Expr::Variable {
+                name: self.peek().clone(),
+                depth: None,
+            }),
             _ => None,
         };
         if let Some(e) = expr {

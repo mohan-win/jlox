@@ -3,20 +3,16 @@ use crate::{ast::Fun, error::error_in_token, interpreter::Interpreter, token::To
 use super::ast::{Expr, Stmt};
 use std::collections::HashMap;
 
-pub struct Resolver<'a> {
+pub struct Resolver {
     scopes: Vec<HashMap<String, bool>>,
-    interpreter: &'a mut Interpreter,
 }
 
-impl<'a> Resolver<'a> {
-    pub fn new(interpreter: &'a mut Interpreter) -> Resolver<'a> {
-        Resolver {
-            scopes: Vec::new(),
-            interpreter,
-        }
+impl Resolver {
+    pub fn new() -> Resolver {
+        Resolver { scopes: Vec::new() }
     }
 
-    fn resolve_stmt(&mut self, stmt: &Stmt) {
+    fn resolve_stmt(&mut self, stmt: &mut Stmt) {
         match stmt {
             Stmt::Block { statements } => {
                 self.begin_scope();
@@ -44,17 +40,17 @@ impl<'a> Resolver<'a> {
             } => {
                 self.resolve_expr(condition);
                 self.resolve_stmt(then_branch);
-                else_branch.as_ref().and_then(|else_branch| {
+                else_branch.as_mut().and_then(|else_branch| {
                     self.resolve_stmt(else_branch);
                     Some(())
                 });
             }
             Stmt::WhileStmt { condition, body } => {
                 self.resolve_expr(condition);
-                self.resolve_stmt(&body);
+                self.resolve_stmt(body.as_mut());
             }
             Stmt::Return { keyword: _, value } => {
-                value.as_ref().and_then(|value| {
+                value.as_mut().and_then(|value| {
                     self.resolve_expr(value);
                     Some(())
                 });
@@ -62,19 +58,19 @@ impl<'a> Resolver<'a> {
         }
     }
 
-    fn resolve_expr(&mut self, expr: &Expr) {
+    fn resolve_expr(&mut self, expr: &mut Expr) {
         match expr {
-            Expr::Variable(name) => {
+            Expr::Variable { name, depth } => {
                 if !self.scopes.is_empty() {
                     if let Some(false) = self.scopes.last().unwrap().get(&name.lexeme) {
                         error_in_token(name, "Can't read local variable in its own initializer")
                     }
                 }
-                self.resolve_local(expr, name)
+                *depth = self.resolve_local_depth(name)
             }
-            expr @ Expr::Assign { name, value } => {
+            Expr::Assign { name, value, depth } => {
                 self.resolve_expr(value);
-                self.resolve_local(expr, name)
+                *depth = self.resolve_local_depth(name)
             }
             Expr::Litral(_) => {}
             Expr::Unary { operator: _, right } => {
@@ -106,23 +102,23 @@ impl<'a> Resolver<'a> {
             } => {
                 self.resolve_expr(callee);
                 arguments
-                    .iter()
+                    .iter_mut()
                     .for_each(|argument| self.resolve_expr(argument));
             }
         }
     }
 
-    fn resolve_function(&mut self, fun: &Fun) {
+    fn resolve_function(&mut self, fun: &mut Fun) {
         self.begin_scope();
         fun.params.iter().for_each(|param| {
             self.declare(param);
             self.define(param);
         });
-        self.resolve_stmts(&fun.body);
+        self.resolve_stmts(fun.body.as_mut());
         self.end_scope();
     }
 
-    fn resolve_local(&mut self, expr: &Expr, name: &Token) {
+    fn resolve_local_depth(&self, name: &Token) -> Option<usize> {
         let result = self
             .scopes
             .iter()
@@ -136,12 +132,14 @@ impl<'a> Resolver<'a> {
                 }
             });
         if let Err(depth) = result {
-            self.interpreter.resolve(expr, depth)
+            Some(depth)
+        } else {
+            None
         }
     }
 
-    fn resolve_stmts(&mut self, stmts: &Vec<Stmt>) {
-        stmts.iter().for_each(|stmt| self.resolve_stmt(stmt))
+    fn resolve_stmts(&mut self, stmts: &mut Vec<Stmt>) {
+        stmts.iter_mut().for_each(|stmt| self.resolve_stmt(stmt))
     }
 
     fn begin_scope(&mut self) {

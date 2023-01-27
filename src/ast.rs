@@ -12,7 +12,10 @@ pub enum LitralValue {
 #[derive(Clone, Debug)]
 pub enum Expr {
     Litral(LitralValue),
-    Variable(Token),
+    Variable {
+        name: Token,
+        depth: Option<usize>,
+    },
     Unary {
         operator: Token,
         right: Box<Expr>,
@@ -32,6 +35,7 @@ pub enum Expr {
     },
     Assign {
         name: Token,
+        depth: Option<usize>,
         value: Box<Expr>,
     },
     Call {

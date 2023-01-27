@@ -41,10 +41,6 @@ impl Interpreter {
             .try_for_each(|statement| self.execute(statement))
     }
 
-    pub fn resolve(&mut self, expr: &Expr, depth: usize) {
-        // ToDo::
-    }
-
     fn define_globals() -> Rc<RefCell<Environment>> {
         let environment = Rc::new(RefCell::new(Environment::new()));
         let clock = Rc::new(NativeFnClock {});
@@ -210,8 +206,8 @@ impl Interpreter {
                 }
             }
             Expr::Litral(litral) => Ok(litral.clone().into()),
-            Expr::Variable(name) => self.env_get(name),
-            Expr::Assign { name, value } => {
+            Expr::Variable { name, depth } => self.env_get(name),
+            Expr::Assign { name, value, depth } => {
                 let value = self.evaluate(value)?;
                 self.env_assign(name, value)
             }
