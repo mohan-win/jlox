@@ -41,6 +41,10 @@ impl Interpreter {
             .try_for_each(|statement| self.execute(statement))
     }
 
+    pub fn resolve(&mut self, expr: &Expr, depth: usize) {
+        // ToDo::
+    }
+
     fn define_globals() -> Rc<RefCell<Environment>> {
         let environment = Rc::new(RefCell::new(Environment::new()));
         let clock = Rc::new(NativeFnClock {});
