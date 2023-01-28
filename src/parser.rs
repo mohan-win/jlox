@@ -540,7 +540,7 @@ impl fmt::Display for ParserError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Parser error: line {} at {:?} message {}",
+            "Parser error: line {} at [{:?}] message {}",
             self.line, self.token_type, self.message
         )
     }
