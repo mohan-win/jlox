@@ -45,6 +45,17 @@ impl Environment {
             )
         }
     }
+
+    pub fn get_at(&self, name: &Token, depth: usize) -> RuntimeResult {
+        let runtime_value = self.env_at_depth(depth, |env| {
+            env.values
+                .get(&name.lexeme)
+                .expect("Local names should be found in the environment at exact depth")
+                .clone()
+        });
+        Ok(runtime_value)
+    }
+
     pub fn assign(&mut self, name: &Token, value: RuntimeValue) -> RuntimeResult {
         if let Some(_) = self.values.get(name.lexeme.as_str()) {
             self.values.insert(name.lexeme.clone(), value.clone());
@@ -60,8 +71,51 @@ impl Environment {
         }
     }
 
+    pub fn assign_at(&mut self, name: &Token, value: RuntimeValue, depth: usize) -> RuntimeResult {
+        self.env_mut_at_depth(depth, |env| {
+            env.values.insert(name.lexeme.clone(), value.clone());
+        });
+
+        Ok(value)
+    }
+
     pub fn take_enclosing(&mut self) -> Option<Rc<RefCell<Environment>>> {
         self.enclosing.take()
+    }
+
+    fn ancestor(&self, depth: usize) -> &Rc<RefCell<Environment>> {
+        let mut environment = None;
+        let mut i = 0;
+        while i < depth {
+            environment = Some(
+                self.enclosing
+                    .as_ref()
+                    .expect("There should be an environment at exact depth"),
+            );
+            i += 1;
+        }
+        environment.unwrap()
+    }
+
+    fn env_mut_at_depth<F, R>(&mut self, depth: usize, f: F) -> R
+    where
+        F: FnOnce(&mut Environment) -> R,
+    {
+        if depth == 0 {
+            f(self)
+        } else {
+            f(&mut self.ancestor(depth).borrow_mut())
+        }
+    }
+    fn env_at_depth<F, R>(&self, depth: usize, f: F) -> R
+    where
+        F: FnOnce(&Environment) -> R,
+    {
+        if depth == 0 {
+            f(self)
+        } else {
+            f(&self.ancestor(depth).borrow())
+        }
     }
 }
 
