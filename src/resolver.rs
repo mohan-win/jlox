@@ -1,19 +1,31 @@
-use crate::{ast::Fun, error::error_in_token, token::Token};
+use crate::{ast::Fun, token::Token};
 
 use super::ast::{Expr, Stmt};
 use std::collections::HashMap;
+use std::error;
+use std::fmt;
 
 pub struct Resolver {
     scopes: Vec<HashMap<String, bool>>,
+    current_function: Option<FunctionType>,
+    num_of_resolver_errs: usize,
 }
 
 impl Resolver {
     pub fn new() -> Resolver {
-        Resolver { scopes: Vec::new() }
+        Resolver {
+            scopes: Vec::new(),
+            current_function: None,
+            num_of_resolver_errs: 0,
+        }
+    }
+
+    pub fn get_num_of_resolver_errs(&self) -> usize {
+        self.num_of_resolver_errs
     }
 
     pub fn resolve_stmts(&mut self, stmts: &mut Vec<Stmt>) {
-        stmts.iter_mut().for_each(|stmt| self.resolve_stmt(stmt))
+        stmts.iter_mut().for_each(|stmt| self.resolve_stmt(stmt));
     }
 
     fn resolve_stmt(&mut self, stmt: &mut Stmt) {
@@ -31,9 +43,14 @@ impl Resolver {
                 self.define(name)
             }
             Stmt::Function(fun) => {
+                let enclosing_function = self.current_function.take();
+                self.current_function = Some(FunctionType::Function);
+
                 self.declare(&fun.name);
                 self.define(&fun.name);
-                self.resolve_function(fun)
+                self.resolve_function(fun);
+
+                self.current_function = enclosing_function;
             }
             Stmt::PrintStmt { expression } => self.resolve_expr(expression),
             Stmt::ExpressionStmt { expression } => self.resolve_expr(expression),
@@ -53,11 +70,18 @@ impl Resolver {
                 self.resolve_expr(condition);
                 self.resolve_stmt(body.as_mut());
             }
-            Stmt::Return { keyword: _, value } => {
-                value.as_mut().and_then(|value| {
-                    self.resolve_expr(value);
-                    Some(())
-                });
+            Stmt::Return { keyword, value } => {
+                if let Some(FunctionType::Function) = self.current_function {
+                    value.as_mut().and_then(|value| {
+                        self.resolve_expr(value);
+                        Some(())
+                    });
+                } else {
+                    self.error(&ResolverError::new(
+                        &keyword,
+                        "Return statement allowed only inside a function",
+                    ))
+                }
             }
         }
     }
@@ -67,7 +91,10 @@ impl Resolver {
             Expr::Variable { name, depth } => {
                 if !self.scopes.is_empty() {
                     if let Some(false) = self.scopes.last().unwrap().get(&name.lexeme) {
-                        error_in_token(name, "Can't read local variable in its own initializer")
+                        self.error(&ResolverError::new(
+                            name,
+                            "Can't read local variable in its own initializer",
+                        ))
                     }
                 }
                 *depth = self.resolve_local_depth(name)
@@ -154,11 +181,16 @@ impl Resolver {
         if self.scopes.is_empty() {
             return;
         }
+        let scope = self.scopes.last_mut().unwrap();
 
-        self.scopes
-            .last_mut()
-            .unwrap()
-            .insert(name.lexeme.clone(), false);
+        if !scope.contains_key(&name.lexeme) {
+            scope.insert(name.lexeme.clone(), false);
+        } else {
+            self.error(&ResolverError::new(
+                name,
+                "Already a variable with this name in this scope",
+            ))
+        }
     }
 
     fn define(&mut self, name: &Token) {
@@ -171,4 +203,40 @@ impl Resolver {
             .unwrap()
             .insert(name.lexeme.clone(), true);
     }
+
+    fn error(&mut self, err: &ResolverError) {
+        self.num_of_resolver_errs += 1;
+        crate::error::error_at_compiler(err)
+    }
 }
+
+enum FunctionType {
+    Function,
+}
+
+#[derive(Debug)]
+struct ResolverError {
+    token: Token,
+    message: String,
+}
+
+impl ResolverError {
+    fn new(token: &Token, message: &str) -> ResolverError {
+        ResolverError {
+            token: token.clone(),
+            message: String::from(message),
+        }
+    }
+}
+
+impl<'a> fmt::Display for ResolverError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Resolver error: line {} at {:?} message {}",
+            self.token.line, self.token.token_type, self.message
+        )
+    }
+}
+
+impl<'a> error::Error for ResolverError {}

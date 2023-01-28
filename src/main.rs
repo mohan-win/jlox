@@ -68,8 +68,10 @@ fn run(source: String, interpreter: &mut Interpreter) {
     if parser.get_num_of_parser_errors() == 0 {
         let mut resolver = Resolver::new();
         resolver.resolve_stmts(&mut stmts);
-        if let Err(err) = interpreter.interpret(&stmts) {
-            error_at_runtime(err);
+        if resolver.get_num_of_resolver_errs() == 0 {
+            if let Err(err) = interpreter.interpret(&stmts) {
+                error_at_runtime(err);
+            }
         }
     }
 }

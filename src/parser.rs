@@ -1,7 +1,6 @@
 use crate::{
     ast::Expr,
     ast::{Fun, LitralValue, Stmt},
-    error::error_in_parser,
     token::{Token, TokenType},
 };
 use std::error::Error;
@@ -36,6 +35,11 @@ impl<'a> Parser<'a> {
             }
         }
         statements
+    }
+
+    fn error(&mut self, err: ParserError) {
+        self.num_of_parser_errs += 1;
+        crate::error::error_at_compiler(&err);
     }
 
     fn is_at_end(&self) -> bool {
@@ -98,8 +102,7 @@ impl<'a> Parser<'a> {
         };
 
         if let Err(parse_err) = stmt {
-            self.num_of_parser_errs += 1;
-            error_in_parser(&parse_err);
+            self.error(parse_err);
             self.synchronize();
             None
         } else {
@@ -122,7 +125,7 @@ impl<'a> Parser<'a> {
         if !self.check(&TokenType::RIGHT_PARAN) {
             loop {
                 if params.len() >= 255 {
-                    error_in_parser(&ParserError::new(
+                    self.error(ParserError::new(
                         self.peek(),
                         format!("Can't allow more than 255 params for a {}", kind).as_str(),
                     ))
@@ -313,7 +316,7 @@ impl<'a> Parser<'a> {
                     value,
                 }));
             } else {
-                error_in_parser(&ParserError::new(&equals, "Invalid assignment target"));
+                self.error(ParserError::new(&equals, "Invalid assignment target"));
             }
         }
 
@@ -440,7 +443,7 @@ impl<'a> Parser<'a> {
         if !self.check(&TokenType::RIGHT_PARAN) {
             loop {
                 if arguments.len() >= 255 {
-                    error_in_parser(&ParserError::new(
+                    self.error(ParserError::new(
                         self.peek(),
                         "Function can't have more than 255 arguments",
                     ));
