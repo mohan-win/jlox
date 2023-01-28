@@ -1,4 +1,4 @@
-use crate::{ast::Fun, error::error_in_token, interpreter::Interpreter, token::Token};
+use crate::{ast::Fun, error::error_in_token, token::Token};
 
 use super::ast::{Expr, Stmt};
 use std::collections::HashMap;
@@ -10,6 +10,10 @@ pub struct Resolver {
 impl Resolver {
     pub fn new() -> Resolver {
         Resolver { scopes: Vec::new() }
+    }
+
+    pub fn resolve_stmts(&mut self, stmts: &mut Vec<Stmt>) {
+        stmts.iter_mut().for_each(|stmt| self.resolve_stmt(stmt))
     }
 
     fn resolve_stmt(&mut self, stmt: &mut Stmt) {
@@ -136,10 +140,6 @@ impl Resolver {
         } else {
             None
         }
-    }
-
-    fn resolve_stmts(&mut self, stmts: &mut Vec<Stmt>) {
-        stmts.iter_mut().for_each(|stmt| self.resolve_stmt(stmt))
     }
 
     fn begin_scope(&mut self) {

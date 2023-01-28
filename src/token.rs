@@ -1,5 +1,3 @@
-use core::cmp;
-use core::hash::Hash;
 use std::fmt::Display;
 #[derive(PartialEq, Debug, Clone)]
 #[allow(non_camel_case_types)]
@@ -51,14 +49,6 @@ pub enum TokenType {
     WHILE,
 
     EOF,
-}
-
-impl cmp::Eq for TokenType {}
-
-impl Hash for TokenType {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        
-    }
 }
 
 #[derive(Debug, Clone)]

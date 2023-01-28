@@ -1,6 +1,7 @@
 use jlox::error::error_at_runtime;
 use jlox::interpreter::Interpreter;
 use jlox::parser::Parser;
+use jlox::resolver::Resolver;
 use jlox::scanner::Scanner;
 use std::env;
 use std::error::Error;
@@ -62,7 +63,9 @@ fn run(source: String, interpreter: &mut Interpreter) {
     let tokens = scanner.scan_tokens();
     //println!("{:#?}", tokens);
     let mut parser = Parser::new(tokens);
-    let stmts = parser.parse();
+    let mut stmts = parser.parse();
+    let mut resolver = Resolver::new();
+    resolver.resolve_stmts(&mut stmts);
     //println!("{:#?}", stmts);
     if parser.get_num_of_parser_errors() == 0 {
         if let Err(err) = interpreter.interpret(&stmts) {
