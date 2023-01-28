@@ -47,13 +47,13 @@ impl Environment {
     }
 
     pub fn get_at(&self, name: &Token, depth: usize) -> RuntimeResult {
-        let runtime_value = self.env_at_depth(depth, |env| {
+        let value = self.env_at_depth(depth, |env| {
             env.values
                 .get(&name.lexeme)
                 .expect("Local names should be found in the environment at exact depth")
                 .clone()
         });
-        Ok(runtime_value)
+        Ok(value)
     }
 
     pub fn assign(&mut self, name: &Token, value: RuntimeValue) -> RuntimeResult {
@@ -83,16 +83,22 @@ impl Environment {
         self.enclosing.take()
     }
 
-    fn ancestor(&self, depth: usize) -> &Rc<RefCell<Environment>> {
-        let mut environment = None;
-        let mut i = 0;
+    fn ancestor(&self, depth: usize) -> Rc<RefCell<Environment>> {
+        let mut environment = Some(Rc::clone(self.enclosing.as_ref().unwrap()));
+        let mut i = 1;
         while i < depth {
-            environment = Some(
-                self.enclosing
-                    .as_ref()
-                    .expect("There should be an environment at exact depth"),
-            );
             i += 1;
+            let t = Rc::clone(
+                environment
+                    .take()
+                    .unwrap()
+                    .as_ref()
+                    .borrow()
+                    .enclosing
+                    .as_ref()
+                    .unwrap(),
+            );
+            environment = Some(t);
         }
         environment.unwrap()
     }
@@ -114,13 +120,14 @@ impl Environment {
         if depth == 0 {
             f(self)
         } else {
-            f(&self.ancestor(depth).borrow())
+            f(&self.ancestor(depth).as_ref().borrow())
         }
     }
 }
 
 impl fmt::Display for Environment {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Length = {}", self.values.len())?;
         self.values
             .iter()
             .try_for_each(|value| write!(f, "{} {}", value.0, value.1))
