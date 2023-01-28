@@ -1,10 +1,6 @@
 var a = "global";
+var a = 20;
 {
-  fun print_a(){
-    print a;
-  }
-
-  print_a();
-  var a = "block";
-  print_a();
+  
+  var a = 10;
 }

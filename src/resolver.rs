@@ -233,7 +233,7 @@ impl<'a> fmt::Display for ResolverError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Resolver error: line {} at {:?} message {}",
+            "Resolver error: line {} at [{:?}] {}",
             self.token.line, self.token.token_type, self.message
         )
     }
