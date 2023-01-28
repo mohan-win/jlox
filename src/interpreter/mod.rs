@@ -54,18 +54,6 @@ impl Interpreter {
        Helper methods for environment.
     */
 
-    fn env_get(&self, name: &Token) -> RuntimeResult {
-        self.environment.borrow().get(name)
-    }
-
-    fn env_define(&self, name: &str, value: RuntimeValue) {
-        self.environment.borrow_mut().define(name, value)
-    }
-
-    fn env_assign(&self, name: &Token, value: RuntimeValue) -> RuntimeResult {
-        self.environment.borrow_mut().assign(name, value)
-    }
-
     /// Execute statement
     fn execute(&mut self, statement: &Stmt) -> RuntimeResult<()> {
         match statement {
@@ -74,7 +62,7 @@ impl Interpreter {
                 if let Some(expression) = expression {
                     value = self.evaluate(expression)?;
                 }
-                self.env_define(&name.lexeme, value)
+                self.environment.borrow_mut().define(&name.lexeme, value)
             }
             Stmt::ExpressionStmt { expression } => {
                 self.evaluate(expression)?;
@@ -121,7 +109,9 @@ impl Interpreter {
             }
             Stmt::Function(fun) => {
                 let function = Rc::new(LoxFunction::new(fun, &self.environment));
-                self.env_define(fun.name.lexeme.as_str(), RuntimeValue::Function(function))
+                self.environment
+                    .borrow_mut()
+                    .define(fun.name.lexeme.as_str(), RuntimeValue::Function(function))
             }
         }
         Ok(())
@@ -206,10 +196,16 @@ impl Interpreter {
                 }
             }
             Expr::Litral(litral) => Ok(litral.clone().into()),
-            Expr::Variable { name, depth } => self.env_get(name),
+            Expr::Variable { name, depth } => match depth {
+                Some(depth) => self.environment.borrow().get_at(name, *depth),
+                None => self.globals.borrow().get(name),
+            },
             Expr::Assign { name, value, depth } => {
                 let value = self.evaluate(value)?;
-                self.env_assign(name, value)
+                match depth {
+                    Some(depth) => self.environment.borrow_mut().assign_at(name, value, *depth),
+                    None => self.globals.borrow_mut().assign(name, value),
+                }
             }
             Expr::Call {
                 callee,
