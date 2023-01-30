@@ -1,7 +1,10 @@
 { 
   var b = 10;
+  print b;
   {
     var b = 20;
+    var c = 20;
+    print c;
   }
-  print b;
+  
 }
