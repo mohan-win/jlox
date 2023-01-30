@@ -6,8 +6,9 @@ use std::error;
 use std::fmt;
 
 pub struct Resolver {
-    scopes: Vec<HashMap<String, (bool, usize, usize)>>, // Vec<HashMap<variable_name, (is_initialized, num_of_usage)>
+    scopes: Vec<HashMap<String, (usize, bool, usize, usize)>>, // Vec<HashMap<variable_name, (var_index, is_initialized, num_of_usage)>
     current_function: Option<FunctionType>,
+    current_var_index: usize,
     num_of_resolver_errs: usize,
 }
 
@@ -16,6 +17,7 @@ impl Resolver {
         Resolver {
             scopes: Vec::new(),
             current_function: None,
+            current_var_index: 0,
             num_of_resolver_errs: 0,
         }
     }
@@ -25,7 +27,9 @@ impl Resolver {
     }
 
     pub fn resolve(&mut self, stmts: &mut Vec<Stmt>) {
+        self.begin_scope(); // Global scope!
         self.resolve_stmts(stmts);
+        self.end_scope();
     }
 
     fn resolve_stmts(&mut self, stmts: &mut Vec<Stmt>) {
@@ -92,9 +96,9 @@ impl Resolver {
 
     fn resolve_expr(&mut self, expr: &mut Expr) {
         match expr {
-            Expr::Variable { name, depth } => {
+            Expr::Variable { name, depth, index } => {
                 if !self.scopes.is_empty() {
-                    if let Some((false, ..)) = self.scopes.last().unwrap().get(&name.lexeme) {
+                    if let Some((_, false, ..)) = self.scopes.last().unwrap().get(&name.lexeme) {
                         self.error(&ResolverError::new(
                             name,
                             "Can't read local variable in its own initializer",
@@ -102,12 +106,23 @@ impl Resolver {
                     }
                 }
                 self.increment_usage(name);
-                *depth = self.resolve_local_depth(name)
+                if let Some((i, d)) = self.resolve_local_index_depth(name) {
+                    *index = Some(i);
+                    *depth = Some(d);
+                }
             }
-            Expr::Assign { name, value, depth } => {
+            Expr::Assign {
+                name,
+                value,
+                depth,
+                index,
+            } => {
                 self.resolve_expr(value);
                 self.increment_usage(name);
-                *depth = self.resolve_local_depth(name)
+                if let Some((i, d)) = self.resolve_local_index_depth(name) {
+                    *index = Some(i);
+                    *depth = Some(d);
+                }
             }
             Expr::Litral(_) => {}
             Expr::Unary { operator: _, right } => {
@@ -155,21 +170,19 @@ impl Resolver {
         self.end_scope();
     }
 
-    fn resolve_local_depth(&self, name: &Token) -> Option<usize> {
-        let result = self
-            .scopes
-            .iter()
-            .rev()
-            .enumerate()
-            .try_for_each(|(i, scope)| {
-                if scope.contains_key(&name.lexeme) {
-                    Err(i)
-                } else {
-                    Ok(())
-                }
-            });
-        if let Err(depth) = result {
-            Some(depth)
+    /// resolve local depth for the given token
+    fn resolve_local_index_depth(&self, name: &Token) -> Option<(usize, usize)> {
+        let result =
+            self.scopes
+                .iter()
+                .rev()
+                .enumerate()
+                .try_for_each(|(depth, scope)| match scope.get(&name.lexeme) {
+                    Some((var_index, ..)) => Err((var_index, depth)),
+                    None => Ok(()),
+                });
+        if let Err((var_index, depth)) = result {
+            Some((*var_index, depth))
         } else {
             None
         }
@@ -177,7 +190,7 @@ impl Resolver {
 
     fn begin_scope(&mut self) {
         self.scopes
-            .push(HashMap::<String, (bool, usize, usize)>::new());
+            .push(HashMap::<String, (usize, bool, usize, usize)>::new());
     }
 
     fn end_scope(&mut self) {
@@ -186,8 +199,8 @@ impl Resolver {
         }
     }
 
-    fn warn_unused_variables(scope: &HashMap<String, (bool, usize, usize)>) {
-        for (var_name, (_, num_of_usage, line)) in scope {
+    fn warn_unused_variables(scope: &HashMap<String, (usize, bool, usize, usize)>) {
+        for (var_name, (_, _, num_of_usage, line)) in scope {
             if *num_of_usage == 0 {
                 Resolver::warn(&ResolverError::new_with_message(
                     format!("[line: {}] Variable {} is not used", line, var_name).as_str(),
@@ -197,13 +210,18 @@ impl Resolver {
     }
 
     fn declare(&mut self, name: &Token) {
-        if self.scopes.is_empty() {
-            return;
-        }
+        assert!(
+            self.scopes.is_empty() == false,
+            "There should be a scope available"
+        );
         let scope = self.scopes.last_mut().unwrap();
 
         if !scope.contains_key(&name.lexeme) {
-            scope.insert(name.lexeme.clone(), (false, 0, name.line));
+            scope.insert(
+                name.lexeme.clone(),
+                (self.current_var_index, false, 0, name.line),
+            );
+            self.current_var_index += 1;
         } else {
             self.error(&ResolverError::new(
                 name,
@@ -213,14 +231,22 @@ impl Resolver {
     }
 
     fn define(&mut self, name: &Token) {
-        if self.scopes.is_empty() {
-            return;
-        }
+        assert!(
+            self.scopes.is_empty() == false,
+            "There should be a scope available"
+        );
+
+        let var_in_scope = self
+            .scopes
+            .last()
+            .unwrap()
+            .get(name.lexeme.as_str())
+            .expect("Var should be declared before its definition");
 
         self.scopes
             .last_mut()
             .unwrap()
-            .insert(name.lexeme.clone(), (true, 0, name.line));
+            .insert(name.lexeme.clone(), (var_in_scope.0, true, 0, name.line));
     }
 
     fn increment_usage(&mut self, name: &Token) {
@@ -234,11 +260,14 @@ impl Resolver {
 
         match scope {
             Err(scope) => {
-                let (is_defined, num_of_usage, line) = scope
+                let (var_index, is_defined, num_of_usage, line) = scope
                     .get(name.lexeme.as_str())
                     .expect("variable should be present");
 
-                scope.insert(name.lexeme.clone(), (*is_defined, *num_of_usage + 1, *line));
+                scope.insert(
+                    name.lexeme.clone(),
+                    (*var_index, *is_defined, *num_of_usage + 1, *line),
+                );
             }
             Ok(()) => {
                 self.error(&ResolverError::new(
