@@ -6,7 +6,7 @@ use std::error;
 use std::fmt;
 
 pub struct Resolver {
-    scopes: Vec<HashMap<String, bool>>,
+    scopes: Vec<HashMap<String, (bool, usize, usize)>>, // Vec<HashMap<variable_name, (is_initialized, num_of_usage)>
     current_function: Option<FunctionType>,
     num_of_resolver_errs: usize,
 }
@@ -24,7 +24,11 @@ impl Resolver {
         self.num_of_resolver_errs
     }
 
-    pub fn resolve_stmts(&mut self, stmts: &mut Vec<Stmt>) {
+    pub fn resolve(&mut self, stmts: &mut Vec<Stmt>) {
+        self.resolve_stmts(stmts);
+    }
+
+    fn resolve_stmts(&mut self, stmts: &mut Vec<Stmt>) {
         stmts.iter_mut().for_each(|stmt| self.resolve_stmt(stmt));
     }
 
@@ -90,17 +94,19 @@ impl Resolver {
         match expr {
             Expr::Variable { name, depth } => {
                 if !self.scopes.is_empty() {
-                    if let Some(false) = self.scopes.last().unwrap().get(&name.lexeme) {
+                    if let Some((false, ..)) = self.scopes.last().unwrap().get(&name.lexeme) {
                         self.error(&ResolverError::new(
                             name,
                             "Can't read local variable in its own initializer",
                         ))
                     }
                 }
+                self.increment_usage(name);
                 *depth = self.resolve_local_depth(name)
             }
             Expr::Assign { name, value, depth } => {
                 self.resolve_expr(value);
+                self.increment_usage(name);
                 *depth = self.resolve_local_depth(name)
             }
             Expr::Litral(_) => {}
@@ -170,11 +176,24 @@ impl Resolver {
     }
 
     fn begin_scope(&mut self) {
-        self.scopes.push(HashMap::<String, bool>::new());
+        self.scopes
+            .push(HashMap::<String, (bool, usize, usize)>::new());
     }
 
     fn end_scope(&mut self) {
-        self.scopes.pop();
+        if let Some(scope_popped) = self.scopes.pop() {
+            Resolver::warn_unused_variables(&scope_popped)
+        }
+    }
+
+    fn warn_unused_variables(scope: &HashMap<String, (bool, usize, usize)>) {
+        for (var_name, (_, num_of_usage, line)) in scope {
+            if *num_of_usage == 0 {
+                Resolver::warn(&ResolverError::new_with_message(
+                    format!("[line: {}] Variable {} is not used", line, var_name).as_str(),
+                ))
+            }
+        }
     }
 
     fn declare(&mut self, name: &Token) {
@@ -184,7 +203,7 @@ impl Resolver {
         let scope = self.scopes.last_mut().unwrap();
 
         if !scope.contains_key(&name.lexeme) {
-            scope.insert(name.lexeme.clone(), false);
+            scope.insert(name.lexeme.clone(), (false, 0, name.line));
         } else {
             self.error(&ResolverError::new(
                 name,
@@ -201,11 +220,41 @@ impl Resolver {
         self.scopes
             .last_mut()
             .unwrap()
-            .insert(name.lexeme.clone(), true);
+            .insert(name.lexeme.clone(), (true, 0, name.line));
+    }
+
+    fn increment_usage(&mut self, name: &Token) {
+        let scope = self.scopes.iter_mut().rev().try_for_each(|scope| {
+            if scope.contains_key(name.lexeme.as_str()) {
+                Err(scope)
+            } else {
+                Ok(())
+            }
+        });
+
+        match scope {
+            Err(scope) => {
+                let (is_defined, num_of_usage, line) = scope
+                    .get(name.lexeme.as_str())
+                    .expect("variable should be present");
+
+                scope.insert(name.lexeme.clone(), (*is_defined, *num_of_usage + 1, *line));
+            }
+            Ok(()) => {
+                self.error(&ResolverError::new(
+                    name,
+                    "Variable is used before it's declaration",
+                ));
+            }
+        }
     }
 
     fn error(&mut self, err: &ResolverError) {
         self.num_of_resolver_errs += 1;
+        crate::error::error_at_compiler(err)
+    }
+
+    fn warn(err: &ResolverError) {
         crate::error::error_at_compiler(err)
     }
 }
@@ -216,14 +265,20 @@ enum FunctionType {
 
 #[derive(Debug)]
 struct ResolverError {
-    token: Token,
+    token: Option<Token>,
     message: String,
 }
 
 impl ResolverError {
     fn new(token: &Token, message: &str) -> ResolverError {
         ResolverError {
-            token: token.clone(),
+            token: Some(token.clone()),
+            message: String::from(message),
+        }
+    }
+    fn new_with_message(message: &str) -> ResolverError {
+        ResolverError {
+            token: None,
             message: String::from(message),
         }
     }
@@ -231,11 +286,14 @@ impl ResolverError {
 
 impl<'a> fmt::Display for ResolverError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "Resolver error: line {} at [{:?}] {}",
-            self.token.line, self.token.token_type, self.message
-        )
+        match self.token.as_ref() {
+            Some(token) => write!(
+                f,
+                "Resolver error: line {} at [{:?}] {}",
+                token.line, token.token_type, self.message
+            ),
+            None => write!(f, "Resolver error: {}", self.message),
+        }
     }
 }
 

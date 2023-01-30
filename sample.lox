@@ -1,7 +1,7 @@
-fun my_fun() {
-  print "hello fun";
-}
-
-{
-  var my_fun = my_fun;
+{ 
+  var b = 10;
+  {
+    var b = 20;
+  }
+  print b;
 }
