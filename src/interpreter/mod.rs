@@ -6,6 +6,7 @@ use std::{cell::RefCell, rc::Rc};
 
 pub mod environment;
 pub mod interpreter_error;
+pub mod lox_class;
 pub mod lox_function;
 pub mod native_functions;
 pub mod runtime_value;
@@ -15,9 +16,10 @@ use self::{
     interpreter_error::{
         EarlyReturn, EarlyReturnReason, InterpreterError, RuntimeError, RuntimeResult,
     },
+    lox_class::LoxClass,
     lox_function::LoxFunction,
     native_functions::NativeFnClock,
-    runtime_value::{LoxClass, RuntimeValue},
+    runtime_value::RuntimeValue,
 };
 
 pub struct Interpreter {

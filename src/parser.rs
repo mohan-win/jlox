@@ -124,7 +124,7 @@ impl<'a> Parser<'a> {
                 methods.push(fun)
             }
         }
-        self.consume(&TokenType::RIGHT_BRACE, "End class definition with '}'");
+        self.consume(&TokenType::RIGHT_BRACE, "End class definition with '}'")?;
 
         Ok(Stmt::Class { name, methods })
     }

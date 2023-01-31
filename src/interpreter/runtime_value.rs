@@ -1,4 +1,5 @@
 use super::interpreter_error::{RuntimeError, RuntimeResult};
+use super::lox_class::LoxClass;
 use super::Interpreter;
 use crate::ast::LitralValue;
 use std::cmp::{Ordering, PartialOrd};
@@ -9,25 +10,6 @@ use std::rc::Rc;
 pub trait LoxCallable: fmt::Display + Debug {
     fn arity(&self) -> usize;
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<RuntimeValue>) -> RuntimeResult;
-}
-
-#[derive(Debug)]
-pub struct LoxClass {
-    name: String,
-}
-
-impl LoxClass {
-    pub fn new(name: &str) -> LoxClass {
-        LoxClass {
-            name: String::from(name),
-        }
-    }
-}
-
-impl fmt::Display for LoxClass {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name)
-    }
 }
 
 #[derive(Debug, Clone)]
