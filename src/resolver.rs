@@ -1,3 +1,4 @@
+use crate::ast::VarPosition;
 use crate::{ast::Fun, token::Token};
 
 use super::ast::{Expr, Stmt};
@@ -5,8 +6,32 @@ use std::collections::HashMap;
 use std::error;
 use std::fmt;
 
+#[derive(Clone)]
+pub struct VarResolutionInfo {
+    local_index: usize,
+    is_initialized: bool,
+    num_of_usage: usize,
+    line: usize,
+}
+
+impl VarResolutionInfo {
+    fn new(
+        local_index: usize,
+        is_initialized: bool,
+        num_of_usage: usize,
+        line: usize,
+    ) -> VarResolutionInfo {
+        VarResolutionInfo {
+            local_index,
+            is_initialized,
+            num_of_usage,
+            line,
+        }
+    }
+}
+
 pub struct Resolver {
-    scopes: Vec<HashMap<String, (usize, bool, usize, usize)>>, // Vec<HashMap<variable_name, (var_index, is_initialized, num_of_usage)>
+    scopes: Vec<HashMap<String, VarResolutionInfo>>,
     current_function: Option<FunctionType>,
     current_var_index: usize,
     num_of_resolver_errs: usize,
@@ -28,8 +53,22 @@ impl Resolver {
 
     pub fn resolve(&mut self, stmts: &mut Vec<Stmt>) {
         self.begin_scope(); // Global scope!
+        self.add_native_functions_info();
         self.resolve_stmts(stmts);
         self.end_scope();
+    }
+
+    /// Add native functions resolution info
+    fn add_native_functions_info(&mut self) {
+        self.scopes.last_mut().unwrap().insert(
+            String::from("clock"),
+            VarResolutionInfo {
+                local_index: 0,
+                is_initialized: true,
+                num_of_usage: 1, // Note: set the usage to > 0 so that if a program doesn't use native functions it is not warned
+                line: 0,
+            },
+        );
     }
 
     fn resolve_stmts(&mut self, stmts: &mut Vec<Stmt>) {
@@ -96,33 +135,24 @@ impl Resolver {
 
     fn resolve_expr(&mut self, expr: &mut Expr) {
         match expr {
-            Expr::Variable { name, depth, index } => {
+            Expr::Variable { name, pos } => {
                 if !self.scopes.is_empty() {
-                    if let Some((_, false, ..)) = self.scopes.last().unwrap().get(&name.lexeme) {
-                        self.error(&ResolverError::new(
-                            name,
-                            "Can't read local variable in its own initializer",
-                        ))
+                    if let Some(var_info) = self.scopes.last().unwrap().get(&name.lexeme) {
+                        if !var_info.is_initialized {
+                            self.error(&ResolverError::new(
+                                name,
+                                "Can't read local variable in its own initializer",
+                            ))
+                        }
                     }
                 }
                 self.increment_usage(name);
-                if let Some((i, d)) = self.resolve_local_index_depth(name) {
-                    *index = Some(i);
-                    *depth = Some(d);
-                }
+                *pos = self.resolve_local_index_depth(name);
             }
-            Expr::Assign {
-                name,
-                value,
-                depth,
-                index,
-            } => {
+            Expr::Assign { name, value, pos } => {
                 self.resolve_expr(value);
                 self.increment_usage(name);
-                if let Some((i, d)) = self.resolve_local_index_depth(name) {
-                    *index = Some(i);
-                    *depth = Some(d);
-                }
+                *pos = self.resolve_local_index_depth(name);
             }
             Expr::Litral(_) => {}
             Expr::Unary { operator: _, right } => {
@@ -170,27 +200,30 @@ impl Resolver {
         self.end_scope();
     }
 
-    /// resolve local depth for the given token
-    fn resolve_local_index_depth(&self, name: &Token) -> Option<(usize, usize)> {
+    /// resolve local index and depth for the given token
+    fn resolve_local_index_depth(&self, name: &Token) -> Option<VarPosition> {
         let result =
             self.scopes
                 .iter()
                 .rev()
                 .enumerate()
                 .try_for_each(|(depth, scope)| match scope.get(&name.lexeme) {
-                    Some((var_index, ..)) => Err((var_index, depth)),
+                    Some(var_info) => Err(VarPosition {
+                        depth,
+                        index: var_info.local_index,
+                    }),
                     None => Ok(()),
                 });
-        if let Err((var_index, depth)) = result {
-            Some((*var_index, depth))
+        if let Err(var_info) = result {
+            Some(var_info)
         } else {
             None
         }
     }
 
     fn begin_scope(&mut self) {
-        self.scopes
-            .push(HashMap::<String, (usize, bool, usize, usize)>::new());
+        self.scopes.push(HashMap::new());
+        self.current_var_index = 0; // reset the local variable index on a new scope
     }
 
     fn end_scope(&mut self) {
@@ -199,11 +232,15 @@ impl Resolver {
         }
     }
 
-    fn warn_unused_variables(scope: &HashMap<String, (usize, bool, usize, usize)>) {
-        for (var_name, (_, _, num_of_usage, line)) in scope {
-            if *num_of_usage == 0 {
+    fn warn_unused_variables(scope: &HashMap<String, VarResolutionInfo>) {
+        for (var_name, var_info) in scope {
+            if var_info.num_of_usage == 0 {
                 Resolver::warn(&ResolverError::new_with_message(
-                    format!("[line: {}] Variable {} is not used", line, var_name).as_str(),
+                    format!(
+                        "[line: {}] Variable {} is not used",
+                        var_info.line, var_name
+                    )
+                    .as_str(),
                 ))
             }
         }
@@ -219,7 +256,7 @@ impl Resolver {
         if !scope.contains_key(&name.lexeme) {
             scope.insert(
                 name.lexeme.clone(),
-                (self.current_var_index, false, 0, name.line),
+                VarResolutionInfo::new(self.current_var_index, false, 0, name.line),
             );
             self.current_var_index += 1;
         } else {
@@ -236,17 +273,13 @@ impl Resolver {
             "There should be a scope available"
         );
 
-        let var_in_scope = self
+        let var_info = self
             .scopes
-            .last()
-            .unwrap()
-            .get(name.lexeme.as_str())
-            .expect("Var should be declared before its definition");
-
-        self.scopes
             .last_mut()
             .unwrap()
-            .insert(name.lexeme.clone(), (var_in_scope.0, true, 0, name.line));
+            .get_mut(name.lexeme.as_str())
+            .expect("Var should be declared before its definition");
+        var_info.is_initialized = true;
     }
 
     fn increment_usage(&mut self, name: &Token) {
@@ -260,14 +293,10 @@ impl Resolver {
 
         match scope {
             Err(scope) => {
-                let (var_index, is_defined, num_of_usage, line) = scope
-                    .get(name.lexeme.as_str())
+                let var_info: &mut VarResolutionInfo = scope
+                    .get_mut(name.lexeme.as_str())
                     .expect("variable should be present");
-
-                scope.insert(
-                    name.lexeme.clone(),
-                    (*var_index, *is_defined, *num_of_usage + 1, *line),
-                );
+                var_info.num_of_usage += 1;
             }
             Ok(()) => {
                 self.error(&ResolverError::new(

@@ -21,17 +21,13 @@ use self::{
 };
 
 pub struct Interpreter {
-    globals: Rc<RefCell<Environment>>,
     environment: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
     pub fn new() -> Interpreter {
-        let globals = Interpreter::define_globals();
-        let globals_clone = Rc::clone(&globals);
         Interpreter {
-            globals,
-            environment: globals_clone,
+            environment: Interpreter::define_globals(),
         }
     }
 
@@ -46,7 +42,7 @@ impl Interpreter {
         let clock = Rc::new(NativeFnClock {});
         (*environment)
             .borrow_mut()
-            .define("clock", RuntimeValue::Function(clock));
+            .define(RuntimeValue::Function(clock));
         environment
     }
 
@@ -57,12 +53,15 @@ impl Interpreter {
     /// Execute statement
     fn execute(&mut self, statement: &Stmt) -> RuntimeResult<()> {
         match statement {
-            Stmt::Var { name, expression } => {
+            Stmt::Var {
+                name: _,
+                expression,
+            } => {
                 let mut value = RuntimeValue::Nil;
                 if let Some(expression) = expression {
                     value = self.evaluate(expression)?;
                 }
-                self.environment.borrow_mut().define(&name.lexeme, value)
+                self.environment.borrow_mut().define(value)
             }
             Stmt::ExpressionStmt { expression } => {
                 self.evaluate(expression)?;
@@ -111,7 +110,7 @@ impl Interpreter {
                 let function = Rc::new(LoxFunction::new(fun, &self.environment));
                 self.environment
                     .borrow_mut()
-                    .define(fun.name.lexeme.as_str(), RuntimeValue::Function(function))
+                    .define(RuntimeValue::Function(function))
             }
         }
         Ok(())
@@ -196,16 +195,21 @@ impl Interpreter {
                 }
             }
             Expr::Litral(litral) => Ok(litral.clone().into()),
-            Expr::Variable { name, depth } => match depth {
-                Some(depth) => self.environment.borrow().get_at(name, *depth),
-                None => self.globals.borrow().get(name),
-            },
-            Expr::Assign { name, value, depth } => {
+            Expr::Variable { name: _, pos } => self.environment.borrow().get_at(
+                pos.as_ref()
+                    .expect("Variable position should be resolved at resolver"),
+            ),
+            Expr::Assign {
+                name: _,
+                value,
+                pos,
+            } => {
                 let value = self.evaluate(value)?;
-                match depth {
-                    Some(depth) => self.environment.borrow_mut().assign_at(name, value, *depth),
-                    None => self.globals.borrow_mut().assign(name, value),
-                }
+                self.environment.borrow_mut().assign_at(
+                    value,
+                    pos.as_ref()
+                        .expect("Variable position should be resolved at resolver"),
+                )
             }
             Expr::Call {
                 callee,

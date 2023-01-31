@@ -34,9 +34,8 @@ impl<'a> LoxCallable for LoxFunction {
 
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<RuntimeValue>) -> RuntimeResult {
         let mut environment = Environment::new_with(Rc::clone(&self.closure));
-        for (i, arg) in arguments.into_iter().enumerate() {
-            let param = &self.function.params[i];
-            environment.define(param.lexeme.as_str(), arg)
+        for arg in arguments.into_iter() {
+            environment.define(arg)
         }
 
         let result = interpreter.execute_block(&self.function.body, environment);

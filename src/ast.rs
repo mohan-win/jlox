@@ -10,11 +10,23 @@ pub enum LitralValue {
 }
 
 #[derive(Clone, Debug)]
+pub struct VarPosition {
+    pub depth: usize,
+    pub index: usize,
+}
+
+impl VarPosition {
+    pub fn new(depth: usize, index: usize) -> VarPosition {
+        VarPosition { depth, index }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub enum Expr {
     Litral(LitralValue),
     Variable {
         name: Token,
-        depth: Option<usize>,
+        pos: Option<VarPosition>,
     },
     Unary {
         operator: Token,
@@ -35,8 +47,8 @@ pub enum Expr {
     },
     Assign {
         name: Token,
-        depth: Option<usize>,
         value: Box<Expr>,
+        pos: Option<VarPosition>,
     },
     Call {
         callee: Box<Expr>,
