@@ -30,10 +30,9 @@ impl Resolver {
 
     fn resolve_stmt(&mut self, stmt: &mut Stmt) {
         match stmt {
-            Stmt::Block { statements } => {
-                self.begin_scope();
-                self.resolve_stmts(statements);
-                self.end_scope();
+            Stmt::Class { name, .. } => {
+                self.declare(name);
+                self.define(name);
             }
             Stmt::Var { name, expression } => {
                 self.declare(name);
@@ -52,6 +51,12 @@ impl Resolver {
 
                 self.current_function = enclosing_function;
             }
+            Stmt::Block { statements } => {
+                self.begin_scope();
+                self.resolve_stmts(statements);
+                self.end_scope();
+            }
+
             Stmt::PrintStmt { expression } => self.resolve_expr(expression),
             Stmt::ExpressionStmt { expression } => self.resolve_expr(expression),
             Stmt::IfStmt {

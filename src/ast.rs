@@ -54,6 +54,11 @@ pub struct Fun {
 
 #[derive(Clone, Debug)]
 pub enum Stmt {
+    Class {
+        name: Token,
+        methods: Vec<Fun>,
+    },
+    Function(Fun),
     Var {
         name: Token,
         expression: Option<Expr>,
@@ -76,7 +81,6 @@ pub enum Stmt {
         condition: Expr,
         body: Box<Stmt>,
     },
-    Function(Fun),
     Return {
         keyword: Token,
         value: Option<Expr>,

@@ -17,7 +17,7 @@ use self::{
     },
     lox_function::LoxFunction,
     native_functions::NativeFnClock,
-    runtime_value::RuntimeValue,
+    runtime_value::{LoxClass, RuntimeValue},
 };
 
 pub struct Interpreter {
@@ -57,6 +57,17 @@ impl Interpreter {
     /// Execute statement
     fn execute(&mut self, statement: &Stmt) -> RuntimeResult<()> {
         match statement {
+            Stmt::Class { name, methods: _ } => {
+                self.environment
+                    .borrow_mut()
+                    .define(&name.lexeme, RuntimeValue::Nil);
+
+                let kclass = Rc::new(LoxClass::new(&name.lexeme));
+
+                self.environment
+                    .borrow_mut()
+                    .assign(name, RuntimeValue::Class(kclass))?;
+            }
             Stmt::Var { name, expression } => {
                 let mut value = RuntimeValue::Nil;
                 if let Some(expression) = expression {

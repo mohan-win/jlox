@@ -93,7 +93,9 @@ impl<'a> Parser<'a> {
     }
 
     fn declaration(&mut self) -> Option<Stmt> {
-        let stmt = if self.matches(&[TokenType::FUN]) {
+        let stmt = if self.matches(&[TokenType::CLASS]) {
+            self.class_declaration()
+        } else if self.matches(&[TokenType::FUN]) {
             self.function("function")
         } else if self.matches(&[TokenType::VAR]) {
             self.var_declaration()
@@ -108,6 +110,23 @@ impl<'a> Parser<'a> {
         } else {
             stmt.ok()
         }
+    }
+
+    fn class_declaration(&mut self) -> ParserResult<Stmt> {
+        let name = self
+            .consume(&TokenType::IDENTIFIER, "Expect class name")?
+            .clone();
+
+        self.consume(&TokenType::LEFT_BRACE, "Expect '{' after the class name")?;
+        let mut methods = Vec::new();
+        while !self.check(&TokenType::RIGHT_BRACE) && !self.is_at_end() {
+            if let Stmt::Function(fun) = self.function("method")? {
+                methods.push(fun)
+            }
+        }
+        self.consume(&TokenType::RIGHT_BRACE, "End class definition with '}'");
+
+        Ok(Stmt::Class { name, methods })
     }
 
     fn function(&mut self, kind: &str) -> ParserResult<Stmt> {

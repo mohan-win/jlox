@@ -11,6 +11,25 @@ pub trait LoxCallable: fmt::Display + Debug {
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<RuntimeValue>) -> RuntimeResult;
 }
 
+#[derive(Debug)]
+pub struct LoxClass {
+    name: String,
+}
+
+impl LoxClass {
+    pub fn new(name: &str) -> LoxClass {
+        LoxClass {
+            name: String::from(name),
+        }
+    }
+}
+
+impl fmt::Display for LoxClass {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum RuntimeValue {
     Number(f64),
@@ -18,6 +37,7 @@ pub enum RuntimeValue {
     Boolean(bool),
     Nil,
     Function(Rc<dyn LoxCallable>),
+    Class(Rc<LoxClass>),
 }
 
 impl Neg for RuntimeValue {
@@ -187,6 +207,7 @@ impl fmt::Display for RuntimeValue {
             String(value) => write!(f, "{}", value),
             Boolean(value) => write!(f, "{}", value),
             Function(ptr) => write!(f, "{}", ptr),
+            Class(ptr) => write!(f, "{}", ptr),
         }
     }
 }
