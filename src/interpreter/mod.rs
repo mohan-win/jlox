@@ -48,7 +48,7 @@ impl Interpreter {
         let clock = Rc::new(NativeFnClock {});
         (*environment)
             .borrow_mut()
-            .define("clock", RuntimeValue::Function(clock));
+            .define("clock", RuntimeValue::Callable(clock));
         environment
     }
 
@@ -68,7 +68,7 @@ impl Interpreter {
 
                 self.environment
                     .borrow_mut()
-                    .assign(name, RuntimeValue::Class(kclass))?;
+                    .assign(name, RuntimeValue::Callable(kclass))?;
             }
             Stmt::Var { name, expression } => {
                 let mut value = RuntimeValue::Nil;
@@ -124,7 +124,7 @@ impl Interpreter {
                 let function = Rc::new(LoxFunction::new(fun, &self.environment));
                 self.environment
                     .borrow_mut()
-                    .define(fun.name.lexeme.as_str(), RuntimeValue::Function(function))
+                    .define(fun.name.lexeme.as_str(), RuntimeValue::Callable(function))
             }
         }
         Ok(())
@@ -235,7 +235,7 @@ impl Interpreter {
         paran: &Token,
         arguments: &Vec<Expr>,
     ) -> RuntimeResult {
-        if let RuntimeValue::Function(function) = self.evaluate(callee)? {
+        if let RuntimeValue::Callable(function) = self.evaluate(callee)? {
             let mut argument_vals = Vec::new();
             if function.arity() != arguments.len() {
                 Err(RuntimeError::new(

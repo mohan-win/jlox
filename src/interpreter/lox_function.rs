@@ -21,13 +21,13 @@ impl LoxFunction {
     }
 }
 
-impl<'a> fmt::Display for LoxFunction {
+impl fmt::Display for LoxFunction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "<fn {}>", self.function.name.lexeme)
     }
 }
 
-impl<'a> LoxCallable for LoxFunction {
+impl LoxCallable for LoxFunction {
     fn arity(&self) -> usize {
         self.function.params.len()
     }

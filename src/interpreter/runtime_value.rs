@@ -1,5 +1,5 @@
 use super::interpreter_error::{RuntimeError, RuntimeResult};
-use super::lox_class::LoxClass;
+use super::lox_class::LoxInstance;
 use super::Interpreter;
 use crate::ast::LitralValue;
 use std::cmp::{Ordering, PartialOrd};
@@ -18,8 +18,8 @@ pub enum RuntimeValue {
     String(String),
     Boolean(bool),
     Nil,
-    Function(Rc<dyn LoxCallable>),
-    Class(Rc<LoxClass>),
+    Callable(Rc<dyn LoxCallable>),
+    Instance(Rc<LoxInstance>),
 }
 
 impl Neg for RuntimeValue {
@@ -188,8 +188,8 @@ impl fmt::Display for RuntimeValue {
             Number(value) => write!(f, "{}", value),
             String(value) => write!(f, "{}", value),
             Boolean(value) => write!(f, "{}", value),
-            Function(ptr) => write!(f, "{}", ptr),
-            Class(ptr) => write!(f, "{}", ptr),
+            Callable(ptr) => write!(f, "{}", ptr),
+            Instance(ptr) => write!(f, "{}", ptr),
         }
     }
 }

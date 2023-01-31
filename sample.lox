@@ -4,4 +4,4 @@ class SomeClass {
   }
 }
 
-print SomeClass;
+print SomeClass();
