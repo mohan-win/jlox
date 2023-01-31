@@ -26,8 +26,9 @@ pub struct Interpreter {
 
 impl Interpreter {
     pub fn new() -> Interpreter {
+        let env = Environment::new_with(Interpreter::define_native_fn());
         Interpreter {
-            environment: Interpreter::define_globals(),
+            environment: Rc::new(RefCell::new(env)),
         }
     }
 
@@ -37,7 +38,7 @@ impl Interpreter {
             .try_for_each(|statement| self.execute(statement))
     }
 
-    fn define_globals() -> Rc<RefCell<Environment>> {
+    fn define_native_fn() -> Rc<RefCell<Environment>> {
         let environment = Rc::new(RefCell::new(Environment::new()));
         let clock = Rc::new(NativeFnClock {});
         (*environment)

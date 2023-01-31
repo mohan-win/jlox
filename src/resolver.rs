@@ -52,10 +52,14 @@ impl Resolver {
     }
 
     pub fn resolve(&mut self, stmts: &mut Vec<Stmt>) {
-        self.begin_scope(); // Global scope!
+        self.begin_scope(); // Native functions scope
         self.add_native_functions_info();
+
+        self.begin_scope(); // Global scope!
         self.resolve_stmts(stmts);
-        self.end_scope();
+        self.end_scope(); // End Global scope
+
+        self.end_scope(); // End Native functions scope
     }
 
     /// Add native functions resolution info
