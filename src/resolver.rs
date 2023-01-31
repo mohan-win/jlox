@@ -234,6 +234,9 @@ impl Resolver {
         if let Some(scope_popped) = self.scopes.pop() {
             Resolver::warn_unused_variables(&scope_popped)
         }
+        if let Some(scope) = self.scopes.last() {
+            self.current_var_index = scope.len();
+        }
     }
 
     fn warn_unused_variables(scope: &HashMap<String, VarResolutionInfo>) {
