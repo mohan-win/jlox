@@ -2,6 +2,7 @@ use super::interpreter_error::{RuntimeError, RuntimeResult};
 use super::lox_class::LoxInstance;
 use super::Interpreter;
 use crate::ast::LitralValue;
+use std::cell::RefCell;
 use std::cmp::{Ordering, PartialOrd};
 use std::fmt::{self, Debug};
 use std::ops::{Add, Div, Mul, Neg, Not, Sub};
@@ -19,7 +20,7 @@ pub enum RuntimeValue {
     Boolean(bool),
     Nil,
     Callable(Rc<dyn LoxCallable>),
-    Instance(Rc<LoxInstance>),
+    Instance(Rc<RefCell<LoxInstance>>),
 }
 
 impl Neg for RuntimeValue {
@@ -189,7 +190,7 @@ impl fmt::Display for RuntimeValue {
             String(value) => write!(f, "{}", value),
             Boolean(value) => write!(f, "{}", value),
             Callable(ptr) => write!(f, "{}", ptr),
-            Instance(ptr) => write!(f, "{}", ptr),
+            Instance(ptr) => write!(f, "{}", ptr.as_ref().borrow()),
         }
     }
 }

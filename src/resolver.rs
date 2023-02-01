@@ -142,6 +142,14 @@ impl Resolver {
                     .for_each(|argument| self.resolve_expr(argument));
             }
             Expr::Get { object, name: _ } => self.resolve_expr(object),
+            Expr::Set {
+                object,
+                name: _,
+                value,
+            } => {
+                self.resolve_expr(object);
+                self.resolve_expr(value);
+            }
         }
     }
 

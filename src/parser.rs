@@ -334,6 +334,12 @@ impl<'a> Parser<'a> {
                     depth: None,
                     value,
                 }));
+            } else if let Expr::Get { object, name } = *expr {
+                return Ok(Box::new(Expr::Set {
+                    object,
+                    name,
+                    value,
+                }));
             } else {
                 self.error(ParserError::new(&equals, "Invalid assignment target"));
             }

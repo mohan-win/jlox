@@ -227,7 +227,7 @@ impl Interpreter {
             } => self.evaluate_function_call(callee, paran, arguments),
             Expr::Get { object, name } => {
                 if let RuntimeValue::Instance(instance) = self.evaluate(object)? {
-                    let value = instance.get(name);
+                    let value = instance.as_ref().borrow().get(name);
                     match value {
                         Some(value) => Ok(value),
                         None => Err(RuntimeError::new(
@@ -237,6 +237,22 @@ impl Interpreter {
                     }
                 } else {
                     Err(RuntimeError::new(name, "Only instance can have properties"))
+                }
+            }
+            Expr::Set {
+                object,
+                name,
+                value,
+            } => {
+                let object = self.evaluate(object)?;
+                if let RuntimeValue::Instance(instance) = object {
+                    let value = self.evaluate(value)?;
+                    Ok(instance.as_ref().borrow_mut().set(name, value))
+                } else {
+                    Err(RuntimeError::new(
+                        name,
+                        "Left of a '.' expression should be an instance",
+                    ))
                 }
             }
         }

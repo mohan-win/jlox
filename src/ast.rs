@@ -47,6 +47,11 @@ pub enum Expr {
         object: Box<Expr>,
         name: Token,
     },
+    Set {
+        object: Box<Expr>,
+        name: Token,
+        value: Box<Expr>,
+    },
 }
 
 #[derive(Clone, Debug)]

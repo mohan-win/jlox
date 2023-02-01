@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, fmt, rc::Rc};
 
 use crate::token::Token;
 
@@ -51,7 +51,7 @@ impl LoxCallable for LoxClass {
         _arguments: Vec<super::runtime_value::RuntimeValue>,
     ) -> super::interpreter_error::RuntimeResult {
         let instance = LoxInstance::new(self);
-        Ok(RuntimeValue::Instance(Rc::new(instance)))
+        Ok(RuntimeValue::Instance(Rc::new(RefCell::new(instance))))
     }
 }
 
@@ -71,6 +71,10 @@ impl LoxInstance {
 
     pub fn get(&self, name: &Token) -> Option<RuntimeValue> {
         self.fields.get(&name.lexeme).map(|value| value.clone())
+    }
+    pub fn set(&mut self, name: &Token, value: RuntimeValue) -> RuntimeValue {
+        self.fields.insert(name.lexeme.clone(), value.clone());
+        value
     }
 }
 
