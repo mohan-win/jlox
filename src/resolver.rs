@@ -141,6 +141,7 @@ impl Resolver {
                     .iter_mut()
                     .for_each(|argument| self.resolve_expr(argument));
             }
+            Expr::Get { object, name: _ } => self.resolve_expr(object),
         }
     }
 

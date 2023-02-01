@@ -1,7 +1,9 @@
-class SomeClass {
-  someMethod() {
-    print "hello, class";
+fun my_fun() {
+  fun another_fun() {
+    print "I'm another_fun";
   }
+
+  return another_fun;
 }
 
-print SomeClass();
+my_fun()()();

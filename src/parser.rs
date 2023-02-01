@@ -449,8 +449,18 @@ impl<'a> Parser<'a> {
     fn call(&mut self) -> ParserBoxdResult<Expr> {
         let mut expr = self.primary()?;
 
-        if self.matches(&[TokenType::LEFT_PARAN]) {
-            expr = self.finish_call(expr)?;
+        loop {
+            if self.matches(&[TokenType::LEFT_PARAN]) {
+                expr = self.finish_call(expr)?;
+            } else if self.matches(&[TokenType::DOT]) {
+                let name = self
+                    .consume(&TokenType::IDENTIFIER, "Expect property name after '.'")?
+                    .clone();
+                let object = self.expression()?;
+                expr = Box::new(Expr::Get { object, name })
+            } else {
+                break;
+            }
         }
 
         Ok(expr)

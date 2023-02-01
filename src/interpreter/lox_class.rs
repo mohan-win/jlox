@@ -1,4 +1,6 @@
-use std::{fmt, rc::Rc};
+use std::{collections::HashMap, fmt, rc::Rc};
+
+use crate::token::Token;
 
 use super::runtime_value::{LoxCallable, RuntimeValue};
 
@@ -56,13 +58,19 @@ impl LoxCallable for LoxClass {
 #[derive(Debug, Clone)]
 pub struct LoxInstance {
     kclass: Rc<LoxClassDefinition>,
+    fields: HashMap<String, RuntimeValue>,
 }
 
 impl LoxInstance {
     pub fn new(kclass: &LoxClass) -> LoxInstance {
         LoxInstance {
             kclass: Rc::clone(&kclass.0),
+            fields: HashMap::new(),
         }
+    }
+
+    pub fn get(&self, name: &Token) -> Option<RuntimeValue> {
+        self.fields.get(&name.lexeme).map(|value| value.clone())
     }
 }
 

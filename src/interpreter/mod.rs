@@ -225,6 +225,20 @@ impl Interpreter {
                 paran,
                 arguments,
             } => self.evaluate_function_call(callee, paran, arguments),
+            Expr::Get { object, name } => {
+                if let RuntimeValue::Instance(instance) = self.evaluate(object)? {
+                    let value = instance.get(name);
+                    match value {
+                        Some(value) => Ok(value),
+                        None => Err(RuntimeError::new(
+                            name,
+                            format!("Property {} not found in the object", name.lexeme).as_str(),
+                        )),
+                    }
+                } else {
+                    Err(RuntimeError::new(name, "Only instance can have properties"))
+                }
+            }
         }
     }
 

@@ -43,6 +43,10 @@ pub enum Expr {
         paran: Token,
         arguments: Vec<Expr>,
     },
+    Get {
+        object: Box<Expr>,
+        name: Token,
+    },
 }
 
 #[derive(Clone, Debug)]
