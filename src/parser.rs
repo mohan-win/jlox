@@ -462,8 +462,7 @@ impl<'a> Parser<'a> {
                 let name = self
                     .consume(&TokenType::IDENTIFIER, "Expect property name after '.'")?
                     .clone();
-                let object = self.expression()?;
-                expr = Box::new(Expr::Get { object, name })
+                expr = Box::new(Expr::Get { object: expr, name })
             } else {
                 break;
             }

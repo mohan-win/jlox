@@ -1,9 +1,26 @@
-fun my_fun() {
-  fun another_fun() {
-    print "I'm another_fun";
-  }
+class Animal {
 
-  return another_fun;
 }
 
-my_fun()()();
+class PetInfo {
+
+}
+
+var dog = Animal();
+
+
+dog.num_of_legs = 4;
+print dog.num_of_legs;
+
+dog.num_of_eyes = 2;
+
+var pet_info = PetInfo();
+pet_info.name = "Puni's Pet";
+pet_info.type = "dog";
+
+dog.pet_info = pet_info;
+
+dog.pet_info.name = "Puni & Vaibhavs Pet";
+
+
+print dog.pet_info.name;
