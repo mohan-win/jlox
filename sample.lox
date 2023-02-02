@@ -1,23 +1,26 @@
 class Cake {
-  taste() {
-    var adjective = "delicious";
-    print "The " + this.flavour + " is very " + adjective;
+    taste(adjective) {
+      print "The " + this.flavour + " is tastes very " + adjective + ".";
+    }
+}
+
+class Bakery {
+  getSnack() {
+      this.snack = Cake();
+      this.snack.flavour = "Cheese cake";
+      this.snack.taste("good");
+  }
+
+  callbackToTaste() {
+    var bakery = Bakery();
+    return bakery.getSnack;
   }
 }
 
-var cake = Cake();
-cake.flavour = "Cheese cake";
-cake.taste();
 
-class Thing {
-  getCallback() {
-    fun localFunction() {
-      print this;
-    }
+var bakery = Bakery();
 
-    return localFunction;
- }
-}
+var tasteWhenReady = bakery.callbackToTaste();
+tasteWhenReady();
 
-var callback = Thing().getCallback();
-callback();
+print this;

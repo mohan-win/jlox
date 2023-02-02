@@ -8,6 +8,7 @@ use std::fmt;
 pub struct Resolver {
     scopes: Vec<HashMap<String, bool>>,
     current_function: Option<FunctionType>,
+    current_class: Option<ClassType>,
     num_of_resolver_errs: usize,
 }
 
@@ -16,6 +17,7 @@ impl Resolver {
         Resolver {
             scopes: Vec::new(),
             current_function: None,
+            current_class: None,
             num_of_resolver_errs: 0,
         }
     }
@@ -31,6 +33,9 @@ impl Resolver {
     fn resolve_stmt(&mut self, stmt: &mut Stmt) {
         match stmt {
             Stmt::Class { name, methods } => {
+                let enclosing_class = self.current_class.take();
+                self.current_class = Some(ClassType::Class);
+
                 self.declare(name);
                 self.define(name);
 
@@ -43,6 +48,8 @@ impl Resolver {
                     .iter_mut()
                     .for_each(|method| self.resolve_function(method, FunctionType::Method));
                 self.end_scope();
+
+                self.current_class = enclosing_class;
             }
             Stmt::Var { name, expression } => {
                 self.declare(name);
@@ -109,7 +116,16 @@ impl Resolver {
                 }
                 *depth = self.resolve_local_depth(name)
             }
-            Expr::This { keyword, depth } => *depth = self.resolve_local_depth(keyword),
+            Expr::This { keyword, depth } => {
+                if let Some(_) = self.current_class {
+                    *depth = self.resolve_local_depth(keyword);
+                } else {
+                    self.error(&ResolverError::new(
+                        keyword,
+                        "'this' can referenced only inside a method",
+                    ));
+                }
+            }
             Expr::Assign { name, value, depth } => {
                 self.resolve_expr(value);
                 *depth = self.resolve_local_depth(name)
@@ -238,6 +254,10 @@ impl Resolver {
 enum FunctionType {
     Function,
     Method,
+}
+
+enum ClassType {
+    Class,
 }
 
 #[derive(Debug)]
