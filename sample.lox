@@ -1,13 +1,23 @@
-class Dog {
-  num_of_legs() {
-    return 4;
+class Cake {
+  taste() {
+    var adjective = "delicious";
+    print "The " + this.flavour + " is very " + adjective;
   }
 }
 
-var dog = Dog();
+var cake = Cake();
+cake.flavour = "Cheese cake";
+cake.taste();
 
-print dog.num_of_legs();
+class Thing {
+  getCallback() {
+    fun localFunction() {
+      print this;
+    }
 
-dog.num_of_legs = 10;
+    return localFunction;
+ }
+}
 
-print dog.num_of_legs;
+var callback = Thing().getCallback();
+callback();
