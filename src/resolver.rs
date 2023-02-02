@@ -122,7 +122,7 @@ impl Resolver {
                 } else {
                     self.error(&ResolverError::new(
                         keyword,
-                        "'this' can referenced only inside a method",
+                        "Can't use 'this' outside of a class",
                     ));
                 }
             }
