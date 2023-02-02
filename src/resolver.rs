@@ -30,9 +30,13 @@ impl Resolver {
 
     fn resolve_stmt(&mut self, stmt: &mut Stmt) {
         match stmt {
-            Stmt::Class { name, .. } => {
+            Stmt::Class { name, methods } => {
                 self.declare(name);
                 self.define(name);
+
+                methods
+                    .iter_mut()
+                    .for_each(|method| self.resolve_function(method, FunctionType::Method));
             }
             Stmt::Var { name, expression } => {
                 self.declare(name);
@@ -42,14 +46,9 @@ impl Resolver {
                 self.define(name)
             }
             Stmt::Function(fun) => {
-                let enclosing_function = self.current_function.take();
-                self.current_function = Some(FunctionType::Function);
-
                 self.declare(&fun.name);
                 self.define(&fun.name);
-                self.resolve_function(fun);
-
-                self.current_function = enclosing_function;
+                self.resolve_function(fun, FunctionType::Function);
             }
             Stmt::Block { statements } => {
                 self.begin_scope();
@@ -76,7 +75,7 @@ impl Resolver {
                 self.resolve_stmt(body.as_mut());
             }
             Stmt::Return { keyword, value } => {
-                if let Some(FunctionType::Function) = self.current_function {
+                if let Some(_) = self.current_function {
                     value.as_mut().and_then(|value| {
                         self.resolve_expr(value);
                         Some(())
@@ -84,7 +83,7 @@ impl Resolver {
                 } else {
                     self.error(&ResolverError::new(
                         &keyword,
-                        "Return statement allowed only inside a function",
+                        "Return statement allowed only inside a function or method",
                     ))
                 }
             }
@@ -153,7 +152,10 @@ impl Resolver {
         }
     }
 
-    fn resolve_function(&mut self, fun: &mut Fun) {
+    fn resolve_function(&mut self, fun: &mut Fun, fun_type: FunctionType) {
+        let enclosing_function = self.current_function.take();
+        self.current_function = Some(fun_type);
+
         self.begin_scope();
         fun.params.iter().for_each(|param| {
             self.declare(param);
@@ -161,6 +163,8 @@ impl Resolver {
         });
         self.resolve_stmts(fun.body.as_mut());
         self.end_scope();
+
+        self.current_function = enclosing_function;
     }
 
     fn resolve_local_depth(&self, name: &Token) -> Option<usize> {
@@ -226,6 +230,7 @@ impl Resolver {
 
 enum FunctionType {
     Function,
+    Method,
 }
 
 #[derive(Debug)]

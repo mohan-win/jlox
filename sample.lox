@@ -1,33 +1,13 @@
-class Animal {
-
+class Dog {
+  num_of_legs() {
+    return 4;
+  }
 }
 
-fun make_dog() {
-  var dog = Animal();
+var dog = Dog();
 
+print dog.num_of_legs();
 
-  dog.num_of_legs = 4;
-  dog.num_of_eyes = 2;
+dog.num_of_legs = 10;
 
-  return dog;
-}
-
-class PetInfo {
-
-}
-
-
-var dog = make_dog();
-var pet_info = PetInfo();
-pet_info.name = "Puni's Pet";
-pet_info.type = "dog";
-
-dog.pet_info = pet_info;
-dog.pet_info.name = "Puni & Vaibhavs Pet";
-
-fun print_dogs_info() {
-  print dog.pet_info.name;
-  print dog.pet_info.type;
-}
-
-print_dogs_info();
+print dog.num_of_legs;

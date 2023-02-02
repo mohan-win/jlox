@@ -9,12 +9,14 @@ use super::runtime_value::{LoxCallable, RuntimeValue};
 #[derive(Debug)]
 struct LoxClassDefinition {
     name: String,
+    methods: HashMap<String, Rc<dyn LoxCallable>>,
 }
 
 impl LoxClassDefinition {
-    fn new(name: &str) -> LoxClassDefinition {
+    fn new(name: &str, methods: HashMap<String, Rc<dyn LoxCallable>>) -> LoxClassDefinition {
         LoxClassDefinition {
             name: String::from(name),
+            methods,
         }
     }
 }
@@ -29,8 +31,8 @@ impl fmt::Display for LoxClassDefinition {
 pub struct LoxClass(Rc<LoxClassDefinition>);
 
 impl LoxClass {
-    pub fn new(name: &str) -> LoxClass {
-        LoxClass(Rc::new(LoxClassDefinition::new(name)))
+    pub fn new(name: &str, methods: HashMap<String, Rc<dyn LoxCallable>>) -> LoxClass {
+        LoxClass(Rc::new(LoxClassDefinition::new(name, methods)))
     }
 }
 
@@ -70,11 +72,21 @@ impl LoxInstance {
     }
 
     pub fn get(&self, name: &Token) -> Option<RuntimeValue> {
-        self.fields.get(&name.lexeme).map(|value| value.clone())
+        self.fields
+            .get(&name.lexeme)
+            .map(|value| value.clone())
+            .or(self.lookup_methods(name))
     }
     pub fn set(&mut self, name: &Token, value: RuntimeValue) -> RuntimeValue {
         self.fields.insert(name.lexeme.clone(), value.clone());
         value
+    }
+
+    fn lookup_methods(&self, name: &Token) -> Option<RuntimeValue> {
+        self.kclass
+            .methods
+            .get(&name.lexeme)
+            .map(|method| RuntimeValue::Callable(Rc::clone(method)))
     }
 }
 

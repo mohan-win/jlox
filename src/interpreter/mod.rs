@@ -2,7 +2,7 @@ use crate::{
     ast::{Expr, Stmt},
     token::{Token, TokenType},
 };
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 pub mod environment;
 pub mod interpreter_error;
@@ -19,7 +19,7 @@ use self::{
     lox_class::LoxClass,
     lox_function::LoxFunction,
     native_functions::NativeFnClock,
-    runtime_value::RuntimeValue,
+    runtime_value::{LoxCallable, RuntimeValue},
 };
 
 pub struct Interpreter {
@@ -59,12 +59,20 @@ impl Interpreter {
     /// Execute statement
     fn execute(&mut self, statement: &Stmt) -> RuntimeResult<()> {
         match statement {
-            Stmt::Class { name, methods: _ } => {
+            Stmt::Class { name, methods } => {
                 self.environment
                     .borrow_mut()
                     .define(&name.lexeme, RuntimeValue::Nil);
 
-                let kclass = Rc::new(LoxClass::new(&name.lexeme));
+                let mut methods_map: HashMap<String, Rc<dyn LoxCallable>> = HashMap::new();
+                methods.iter().for_each(|method| {
+                    methods_map.insert(
+                        method.name.lexeme.clone(),
+                        Rc::new(LoxFunction::new(method, &self.environment)),
+                    );
+                });
+
+                let kclass = Rc::new(LoxClass::new(&name.lexeme, methods_map));
 
                 self.environment
                     .borrow_mut()
