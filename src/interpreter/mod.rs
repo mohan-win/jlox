@@ -16,7 +16,7 @@ use self::{
     interpreter_error::{
         EarlyReturn, EarlyReturnReason, InterpreterError, RuntimeError, RuntimeResult,
     },
-    lox_class::LoxClass,
+    lox_class::{LoxClass, LoxInstance},
     lox_function::LoxFunction,
     native_functions::NativeFnClock,
     runtime_value::{LoxCallable, RuntimeValue},
@@ -64,7 +64,7 @@ impl Interpreter {
                     .borrow_mut()
                     .define(&name.lexeme, RuntimeValue::Nil);
 
-                let mut methods_map: HashMap<String, Rc<dyn LoxCallable>> = HashMap::new();
+                let mut methods_map: HashMap<String, Rc<LoxFunction>> = HashMap::new();
                 methods.iter().for_each(|method| {
                     methods_map.insert(
                         method.name.lexeme.clone(),
@@ -221,6 +221,12 @@ impl Interpreter {
                 Some(depth) => self.environment.borrow().get_at(name, *depth),
                 None => self.globals.borrow().get(name),
             },
+            Expr::This { keyword, depth } => match depth {
+                Some(depth) => self.environment.borrow().get_at(keyword, *depth),
+                None => {
+                    panic!("'this' can't be in global scope")
+                }
+            },
             Expr::Assign { name, value, depth } => {
                 let value = self.evaluate(value)?;
                 match depth {
@@ -235,7 +241,7 @@ impl Interpreter {
             } => self.evaluate_function_call(callee, paran, arguments),
             Expr::Get { object, name } => {
                 if let RuntimeValue::Instance(instance) = self.evaluate(object)? {
-                    let value = instance.as_ref().borrow().get(name);
+                    let value = LoxInstance::get(&instance, name);
                     match value {
                         Some(value) => Ok(value),
                         None => Err(RuntimeError::new(

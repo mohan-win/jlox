@@ -16,6 +16,10 @@ pub enum Expr {
         name: Token,
         depth: Option<usize>,
     },
+    This {
+        keyword: Token,
+        depth: Option<usize>,
+    },
     Unary {
         operator: Token,
         right: Box<Expr>,

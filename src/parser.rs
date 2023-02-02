@@ -514,6 +514,10 @@ impl<'a> Parser<'a> {
                 name: self.peek().clone(),
                 depth: None,
             }),
+            THIS => Some(Expr::This {
+                keyword: self.peek().clone(),
+                depth: None,
+            }),
             _ => None,
         };
         if let Some(e) = expr {

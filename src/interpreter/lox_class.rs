@@ -2,18 +2,21 @@ use std::{cell::RefCell, collections::HashMap, fmt, rc::Rc};
 
 use crate::token::Token;
 
-use super::runtime_value::{LoxCallable, RuntimeValue};
+use super::{
+    lox_function::LoxFunction,
+    runtime_value::{LoxCallable, RuntimeValue},
+};
 
 /// Internal class definiation of a LoxClass.
 /// `Note:` This class definition is shared across all the instances of this class.
 #[derive(Debug)]
 struct LoxClassDefinition {
     name: String,
-    methods: HashMap<String, Rc<dyn LoxCallable>>,
+    methods: HashMap<String, Rc<LoxFunction>>,
 }
 
 impl LoxClassDefinition {
-    fn new(name: &str, methods: HashMap<String, Rc<dyn LoxCallable>>) -> LoxClassDefinition {
+    fn new(name: &str, methods: HashMap<String, Rc<LoxFunction>>) -> LoxClassDefinition {
         LoxClassDefinition {
             name: String::from(name),
             methods,
@@ -31,7 +34,7 @@ impl fmt::Display for LoxClassDefinition {
 pub struct LoxClass(Rc<LoxClassDefinition>);
 
 impl LoxClass {
-    pub fn new(name: &str, methods: HashMap<String, Rc<dyn LoxCallable>>) -> LoxClass {
+    pub fn new(name: &str, methods: HashMap<String, Rc<LoxFunction>>) -> LoxClass {
         LoxClass(Rc::new(LoxClassDefinition::new(name, methods)))
     }
 }
@@ -71,22 +74,27 @@ impl LoxInstance {
         }
     }
 
-    pub fn get(&self, name: &Token) -> Option<RuntimeValue> {
-        self.fields
+    pub fn get(this: &Rc<RefCell<Self>>, name: &Token) -> Option<RuntimeValue> {
+        let me = this.as_ref().borrow();
+        me.fields
             .get(&name.lexeme)
-            .map(|value| value.clone())
-            .or(self.lookup_methods(name))
+            .map(|field| field.clone())
+            .or_else(|| {
+                if let Some(method) = me.lookup_methods(name) {
+                    Some(RuntimeValue::Callable(Rc::new(method.bind(this))))
+                } else {
+                    None
+                }
+            })
     }
+
     pub fn set(&mut self, name: &Token, value: RuntimeValue) -> RuntimeValue {
         self.fields.insert(name.lexeme.clone(), value.clone());
         value
     }
 
-    fn lookup_methods(&self, name: &Token) -> Option<RuntimeValue> {
-        self.kclass
-            .methods
-            .get(&name.lexeme)
-            .map(|method| RuntimeValue::Callable(Rc::clone(method)))
+    fn lookup_methods(&self, name: &Token) -> Option<&Rc<LoxFunction>> {
+        self.kclass.methods.get(&name.lexeme)
     }
 }
 

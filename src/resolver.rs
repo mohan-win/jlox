@@ -34,9 +34,15 @@ impl Resolver {
                 self.declare(name);
                 self.define(name);
 
+                self.begin_scope();
+                self.scopes
+                    .last_mut()
+                    .unwrap()
+                    .insert(String::from("this"), true);
                 methods
                     .iter_mut()
                     .for_each(|method| self.resolve_function(method, FunctionType::Method));
+                self.end_scope();
             }
             Stmt::Var { name, expression } => {
                 self.declare(name);
@@ -103,6 +109,7 @@ impl Resolver {
                 }
                 *depth = self.resolve_local_depth(name)
             }
+            Expr::This { keyword, depth } => *depth = self.resolve_local_depth(keyword),
             Expr::Assign { name, value, depth } => {
                 self.resolve_expr(value);
                 *depth = self.resolve_local_depth(name)
