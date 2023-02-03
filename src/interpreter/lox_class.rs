@@ -63,9 +63,10 @@ impl LoxCallable for LoxClass {
         let instance = Rc::new(RefCell::new(LoxInstance::new(self)));
         if let Some(initializer) = self.0.find_methods("init") {
             let initializer = initializer.bind(&instance);
-            initializer.call(interpreter, arguments)?;
+            initializer.call(interpreter, arguments)
+        } else {
+            Ok(RuntimeValue::Instance(instance))
         }
-        Ok(RuntimeValue::Instance(instance))
     }
 }
 

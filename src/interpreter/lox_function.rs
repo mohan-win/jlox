@@ -56,12 +56,19 @@ impl LoxCallable for LoxFunction {
         }
 
         let result = interpreter.execute_block(&self.declaration.body, environment);
-        if let Err(err) = result {
+        if self.is_initializer && result.is_ok() {
+            // return 'this' from constructor
+            self.closure.borrow().get_at("this", 0)
+        } else if let Err(err) = result {
             if let Some(EarlyReturnReason::ReturnFromFunction { return_value }) =
                 err.early_return_reason()
             {
                 if self.is_initializer {
                     // return 'this' from constructor
+                    assert!(
+                        RuntimeValue::Nil == return_value,
+                        "Return statement inside constructor can't have value"
+                    );
                     self.closure.borrow().get_at("this", 0)
                 } else {
                     Ok(return_value)

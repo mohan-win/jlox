@@ -1,7 +1,7 @@
 class Cake {
     init(flavour) {
       this.flavour = flavour;
-      return 100;
+      return;
     }
     taste(adjective) {
       print "The " + this.flavour + " tastes very " + adjective + ".";
