@@ -44,9 +44,13 @@ impl Resolver {
                     .last_mut()
                     .unwrap()
                     .insert(String::from("this"), true);
-                methods
-                    .iter_mut()
-                    .for_each(|method| self.resolve_function(method, FunctionType::Method));
+                methods.iter_mut().for_each(|method| {
+                    let mut declaration = FunctionType::Method;
+                    if method.name.lexeme == "init" {
+                        declaration = FunctionType::Initializer;
+                    }
+                    self.resolve_function(method, declaration);
+                });
                 self.end_scope();
 
                 self.current_class = enclosing_class;
@@ -88,9 +92,17 @@ impl Resolver {
                 self.resolve_stmt(body.as_mut());
             }
             Stmt::Return { keyword, value } => {
-                if let Some(_) = self.current_function {
+                if let Some(fun_type) = self.current_function {
                     value.as_mut().and_then(|value| {
-                        self.resolve_expr(value);
+                        if fun_type == FunctionType::Initializer {
+                            self.error(&ResolverError::new(
+                                keyword,
+                                "Can't return a value from constructor",
+                            ))
+                        } else {
+                            self.resolve_expr(value);
+                        }
+
                         Some(())
                     });
                 } else {
@@ -251,8 +263,10 @@ impl Resolver {
     }
 }
 
+#[derive(Copy, PartialEq, Clone)]
 enum FunctionType {
     Function,
+    Initializer,
     Method,
 }
 

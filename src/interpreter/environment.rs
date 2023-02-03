@@ -46,10 +46,10 @@ impl Environment {
         }
     }
 
-    pub fn get_at(&self, name: &Token, depth: usize) -> RuntimeResult {
+    pub fn get_at(&self, name: &str, depth: usize) -> RuntimeResult {
         let value = self.env_at_depth(depth, |env| {
             env.values
-                .get(&name.lexeme)
+                .get(name)
                 .expect("Local names should be found in the environment at exact depth")
                 .clone()
         });
@@ -71,9 +71,9 @@ impl Environment {
         }
     }
 
-    pub fn assign_at(&mut self, name: &Token, value: RuntimeValue, depth: usize) -> RuntimeResult {
+    pub fn assign_at(&mut self, name: &str, value: RuntimeValue, depth: usize) -> RuntimeResult {
         self.env_mut_at_depth(depth, |env| {
-            env.values.insert(name.lexeme.clone(), value.clone());
+            env.values.insert(String::from(name), value.clone());
         });
 
         Ok(value)

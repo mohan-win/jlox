@@ -3,8 +3,10 @@ use std::{cell::RefCell, collections::HashMap, fmt, rc::Rc};
 use crate::token::Token;
 
 use super::{
+    interpreter_error::RuntimeResult,
     lox_function::LoxFunction,
     runtime_value::{LoxCallable, RuntimeValue},
+    Interpreter,
 };
 
 /// Internal class definiation of a LoxClass.
@@ -21,6 +23,9 @@ impl LoxClassDefinition {
             name: String::from(name),
             methods,
         }
+    }
+    pub fn find_methods(&self, method_name: &str) -> Option<&Rc<LoxFunction>> {
+        self.methods.get(method_name)
     }
 }
 
@@ -47,16 +52,20 @@ impl fmt::Display for LoxClass {
 
 impl LoxCallable for LoxClass {
     fn arity(&self) -> usize {
-        0
+        if let Some(initializer) = self.0.find_methods("init") {
+            initializer.arity()
+        } else {
+            0
+        }
     }
 
-    fn call(
-        &self,
-        _interpreter: &mut super::Interpreter,
-        _arguments: Vec<super::runtime_value::RuntimeValue>,
-    ) -> super::interpreter_error::RuntimeResult {
-        let instance = LoxInstance::new(self);
-        Ok(RuntimeValue::Instance(Rc::new(RefCell::new(instance))))
+    fn call(&self, interpreter: &mut Interpreter, arguments: Vec<RuntimeValue>) -> RuntimeResult {
+        let instance = Rc::new(RefCell::new(LoxInstance::new(self)));
+        if let Some(initializer) = self.0.find_methods("init") {
+            let initializer = initializer.bind(&instance);
+            initializer.call(interpreter, arguments)?;
+        }
+        Ok(RuntimeValue::Instance(instance))
     }
 }
 
@@ -94,7 +103,7 @@ impl LoxInstance {
     }
 
     fn lookup_methods(&self, name: &Token) -> Option<&Rc<LoxFunction>> {
-        self.kclass.methods.get(&name.lexeme)
+        self.kclass.find_methods(&name.lexeme)
     }
 }
 

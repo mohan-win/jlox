@@ -68,7 +68,11 @@ impl Interpreter {
                 methods.iter().for_each(|method| {
                     methods_map.insert(
                         method.name.lexeme.clone(),
-                        Rc::new(LoxFunction::new(method, &self.environment)),
+                        Rc::new(LoxFunction::new(
+                            method,
+                            &self.environment,
+                            method.name.lexeme.eq("init"),
+                        )),
                     );
                 });
 
@@ -129,7 +133,7 @@ impl Interpreter {
                 self.execute_block(statements, Environment::new_with(existing_environment))?;
             }
             Stmt::Function(fun) => {
-                let function = Rc::new(LoxFunction::new(fun, &self.environment));
+                let function = Rc::new(LoxFunction::new(fun, &self.environment, false));
                 self.environment
                     .borrow_mut()
                     .define(fun.name.lexeme.as_str(), RuntimeValue::Callable(function))
@@ -218,11 +222,11 @@ impl Interpreter {
             }
             Expr::Litral(litral) => Ok(litral.clone().into()),
             Expr::Variable { name, depth } => match depth {
-                Some(depth) => self.environment.borrow().get_at(name, *depth),
+                Some(depth) => self.environment.borrow().get_at(&name.lexeme, *depth),
                 None => self.globals.borrow().get(name),
             },
             Expr::This { keyword, depth } => match depth {
-                Some(depth) => self.environment.borrow().get_at(keyword, *depth),
+                Some(depth) => self.environment.borrow().get_at(&keyword.lexeme, *depth),
                 None => {
                     panic!("'this' can't be in global scope")
                 }
@@ -230,7 +234,11 @@ impl Interpreter {
             Expr::Assign { name, value, depth } => {
                 let value = self.evaluate(value)?;
                 match depth {
-                    Some(depth) => self.environment.borrow_mut().assign_at(name, value, *depth),
+                    Some(depth) => {
+                        self.environment
+                            .borrow_mut()
+                            .assign_at(&name.lexeme, value, *depth)
+                    }
                     None => self.globals.borrow_mut().assign(name, value),
                 }
             }

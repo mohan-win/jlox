@@ -1,26 +1,14 @@
 class Cake {
+    init(flavour) {
+      this.flavour = flavour;
+      return 100;
+    }
     taste(adjective) {
-      print "The " + this.flavour + " is tastes very " + adjective + ".";
+      print "The " + this.flavour + " tastes very " + adjective + ".";
     }
 }
 
-class Bakery {
-  getSnack() {
-      this.snack = Cake();
-      this.snack.flavour = "Cheese cake";
-      this.snack.taste("good");
-  }
+var c = Cake("chocolate").init("cheese cake");
+print c;
+c.taste("Mohan likes it");
 
-  callbackToTaste() {
-    var bakery = Bakery();
-    return bakery.getSnack;
-  }
-}
-
-
-var bakery = Bakery();
-
-var tasteWhenReady = bakery.callbackToTaste();
-tasteWhenReady();
-
-print this;

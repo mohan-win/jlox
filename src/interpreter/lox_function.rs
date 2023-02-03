@@ -11,19 +11,29 @@ use std::rc::Rc;
 pub struct LoxFunction {
     declaration: Fun,
     closure: Rc<RefCell<Environment>>,
+    is_initializer: bool,
 }
 
 impl LoxFunction {
-    pub fn new(declaration: &Fun, closure: &Rc<RefCell<Environment>>) -> LoxFunction {
+    pub fn new(
+        declaration: &Fun,
+        closure: &Rc<RefCell<Environment>>,
+        is_initializer: bool,
+    ) -> LoxFunction {
         LoxFunction {
             declaration: declaration.clone(),
+            is_initializer,
             closure: Rc::clone(closure),
         }
     }
     pub fn bind(&self, instance: &Rc<RefCell<LoxInstance>>) -> LoxFunction {
         let mut environment = Environment::new_with(Rc::clone(&self.closure));
         environment.define("this", RuntimeValue::Instance(Rc::clone(instance)));
-        LoxFunction::new(&self.declaration, &Rc::new(RefCell::new(environment)))
+        LoxFunction::new(
+            &self.declaration,
+            &Rc::new(RefCell::new(environment)),
+            self.is_initializer,
+        )
     }
 }
 
@@ -50,7 +60,12 @@ impl LoxCallable for LoxFunction {
             if let Some(EarlyReturnReason::ReturnFromFunction { return_value }) =
                 err.early_return_reason()
             {
-                Ok(return_value)
+                if self.is_initializer {
+                    // return 'this' from constructor
+                    self.closure.borrow().get_at("this", 0)
+                } else {
+                    Ok(return_value)
+                }
             } else {
                 Err(err)
             }
