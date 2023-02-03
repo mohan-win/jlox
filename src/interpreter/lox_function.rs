@@ -1,5 +1,5 @@
 use super::interpreter_error::EarlyReturnReason;
-use super::lox_class::LoxInstance;
+use super::lox_class::ClassInstance;
 use super::{environment::Environment, runtime_value::LoxCallable};
 use super::{interpreter_error::RuntimeResult, runtime_value::RuntimeValue, Interpreter};
 use crate::ast::Fun;
@@ -26,9 +26,9 @@ impl LoxFunction {
             closure: Rc::clone(closure),
         }
     }
-    pub fn bind(&self, instance: &Rc<RefCell<LoxInstance>>) -> LoxFunction {
+    pub fn bind(&self, instance: &ClassInstance) -> LoxFunction {
         let mut environment = Environment::new_with(Rc::clone(&self.closure));
-        environment.define("this", RuntimeValue::Instance(Rc::clone(instance)));
+        environment.define("this", RuntimeValue::Instance(Rc::new(instance.clone())));
         LoxFunction::new(
             &self.declaration,
             &Rc::new(RefCell::new(environment)),

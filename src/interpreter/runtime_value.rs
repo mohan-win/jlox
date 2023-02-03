@@ -1,8 +1,7 @@
 use super::interpreter_error::{RuntimeError, RuntimeResult};
-use super::lox_class::LoxInstance;
 use super::Interpreter;
 use crate::ast::LitralValue;
-use std::cell::RefCell;
+use crate::token::Token;
 use std::cmp::{Ordering, PartialOrd};
 use std::fmt::{self, Debug};
 use std::ops::{Add, Div, Mul, Neg, Not, Sub};
@@ -13,6 +12,11 @@ pub trait LoxCallable: fmt::Display + Debug {
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<RuntimeValue>) -> RuntimeResult;
 }
 
+pub trait LoxInstance: fmt::Display + Debug {
+    fn get(&self, name: &Token) -> Option<RuntimeValue>;
+    fn set(&self, name: &Token, value: RuntimeValue) -> RuntimeValue;
+}
+
 #[derive(Debug, Clone)]
 pub enum RuntimeValue {
     Number(f64),
@@ -20,7 +24,7 @@ pub enum RuntimeValue {
     Boolean(bool),
     Nil,
     Callable(Rc<dyn LoxCallable>),
-    Instance(Rc<RefCell<LoxInstance>>),
+    Instance(Rc<dyn LoxInstance>),
 }
 
 impl Neg for RuntimeValue {
@@ -190,7 +194,7 @@ impl fmt::Display for RuntimeValue {
             String(value) => write!(f, "{}", value),
             Boolean(value) => write!(f, "{}", value),
             Callable(ptr) => write!(f, "{}", ptr),
-            Instance(ptr) => write!(f, "{}", ptr.as_ref().borrow()),
+            Instance(ptr) => write!(f, "{}", ptr),
         }
     }
 }

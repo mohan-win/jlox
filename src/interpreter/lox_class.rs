@@ -5,7 +5,7 @@ use crate::token::Token;
 use super::{
     interpreter_error::RuntimeResult,
     lox_function::LoxFunction,
-    runtime_value::{LoxCallable, RuntimeValue},
+    runtime_value::{LoxCallable, LoxInstance, RuntimeValue},
     Interpreter,
 };
 
@@ -24,8 +24,8 @@ impl LoxClassDefinition {
             methods,
         }
     }
-    pub fn find_methods(&self, method_name: &str) -> Option<&Rc<LoxFunction>> {
-        self.methods.get(method_name)
+    pub fn find_methods(&self, method_name: &str) -> Option<Rc<LoxFunction>> {
+        self.methods.get(method_name).map(|method| method.clone())
     }
 }
 
@@ -60,56 +60,65 @@ impl LoxCallable for LoxClass {
     }
 
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<RuntimeValue>) -> RuntimeResult {
-        let instance = Rc::new(RefCell::new(LoxInstance::new(self)));
+        let instance = ClassInstance::new(self);
         if let Some(initializer) = self.0.find_methods("init") {
             let initializer = initializer.bind(&instance);
             initializer.call(interpreter, arguments)
         } else {
-            Ok(RuntimeValue::Instance(instance))
+            Ok(RuntimeValue::Instance(Rc::new(instance)))
         }
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct LoxInstance {
+#[derive(Debug)]
+struct ClassInstanceData {
     kclass: Rc<LoxClassDefinition>,
     fields: HashMap<String, RuntimeValue>,
 }
 
-impl LoxInstance {
-    pub fn new(kclass: &LoxClass) -> LoxInstance {
-        LoxInstance {
+#[derive(Debug, Clone)]
+pub struct ClassInstance(Rc<RefCell<ClassInstanceData>>);
+
+impl ClassInstance {
+    pub fn new(kclass: &LoxClass) -> ClassInstance {
+        ClassInstance(Rc::new(RefCell::new(ClassInstanceData {
             kclass: Rc::clone(&kclass.0),
             fields: HashMap::new(),
-        }
+        })))
     }
+    fn lookup_methods(&self, name: &Token) -> Option<Rc<LoxFunction>> {
+        self.0.as_ref().borrow().kclass.find_methods(&name.lexeme)
+    }
+}
 
-    pub fn get(this: &Rc<RefCell<Self>>, name: &Token) -> Option<RuntimeValue> {
-        let me = this.as_ref().borrow();
-        me.fields
+impl LoxInstance for ClassInstance {
+    fn get(&self, name: &Token) -> Option<RuntimeValue> {
+        self.0
+            .as_ref()
+            .borrow()
+            .fields
             .get(&name.lexeme)
             .map(|field| field.clone())
             .or_else(|| {
-                if let Some(method) = me.lookup_methods(name) {
-                    Some(RuntimeValue::Callable(Rc::new(method.bind(this))))
+                if let Some(method) = self.lookup_methods(name) {
+                    Some(RuntimeValue::Callable(Rc::new(method.bind(self))))
                 } else {
                     None
                 }
             })
     }
 
-    pub fn set(&mut self, name: &Token, value: RuntimeValue) -> RuntimeValue {
-        self.fields.insert(name.lexeme.clone(), value.clone());
+    fn set(&self, name: &Token, value: RuntimeValue) -> RuntimeValue {
+        self.0
+            .borrow_mut()
+            .fields
+            .insert(name.lexeme.clone(), value.clone());
         value
-    }
-
-    fn lookup_methods(&self, name: &Token) -> Option<&Rc<LoxFunction>> {
-        self.kclass.find_methods(&name.lexeme)
     }
 }
 
-impl fmt::Display for LoxInstance {
+impl fmt::Display for ClassInstance {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "<instance of {}>", self.kclass)
+        write!(f, "<instance of {}>", self.0.as_ref().borrow().kclass)
     }
 }
