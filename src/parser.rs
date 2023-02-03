@@ -119,14 +119,23 @@ impl<'a> Parser<'a> {
 
         self.consume(&TokenType::LEFT_BRACE, "Expect '{' after the class name")?;
         let mut methods = Vec::new();
+        let mut class_methods = Vec::new();
         while !self.check(&TokenType::RIGHT_BRACE) && !self.is_at_end() {
-            if let Stmt::Function(fun) = self.function("method")? {
+            if self.matches(&[TokenType::CLASS]) {
+                if let Stmt::Function(fun) = self.function("static method")? {
+                    class_methods.push(fun)
+                }
+            } else if let Stmt::Function(fun) = self.function("method")? {
                 methods.push(fun)
             }
         }
         self.consume(&TokenType::RIGHT_BRACE, "End class definition with '}'")?;
 
-        Ok(Stmt::Class { name, methods })
+        Ok(Stmt::Class {
+            name,
+            methods,
+            class_methods,
+        })
     }
 
     fn function(&mut self, kind: &str) -> ParserResult<Stmt> {

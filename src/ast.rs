@@ -70,6 +70,7 @@ pub enum Stmt {
     Class {
         name: Token,
         methods: Vec<Fun>,
+        class_methods: Vec<Fun>,
     },
     Function(Fun),
     Var {
