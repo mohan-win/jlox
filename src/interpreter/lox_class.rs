@@ -24,8 +24,8 @@ impl LoxClassDefinition {
             methods,
         }
     }
-    pub fn find_methods(&self, method_name: &str) -> Option<&Rc<LoxFunction>> {
-        self.methods.get(method_name)
+    pub fn find_methods(&self, method_name: &str) -> Option<Rc<LoxFunction>> {
+        self.methods.get(method_name).map(|method| method.clone())
     }
 }
 
@@ -86,7 +86,7 @@ impl ClassInstance {
             fields: HashMap::new(),
         })))
     }
-    fn lookup_methods(&self, name: &Token) -> Option<&Rc<LoxFunction>> {
+    fn lookup_methods(&self, name: &Token) -> Option<Rc<LoxFunction>> {
         self.0.as_ref().borrow().kclass.find_methods(&name.lexeme)
     }
 }
@@ -108,7 +108,7 @@ impl LoxInstance for ClassInstance {
             })
     }
 
-    fn set(&mut self, name: &Token, value: RuntimeValue) -> RuntimeValue {
+    fn set(&self, name: &Token, value: RuntimeValue) -> RuntimeValue {
         self.0
             .borrow_mut()
             .fields

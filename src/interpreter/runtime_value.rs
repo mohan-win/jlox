@@ -14,7 +14,7 @@ pub trait LoxCallable: fmt::Display + Debug {
 
 pub trait LoxInstance: fmt::Display + Debug {
     fn get(&self, name: &Token) -> Option<RuntimeValue>;
-    fn set(&mut self, name: &Token, value: RuntimeValue) -> RuntimeValue;
+    fn set(&self, name: &Token, value: RuntimeValue) -> RuntimeValue;
 }
 
 #[derive(Debug, Clone)]

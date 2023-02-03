@@ -16,7 +16,7 @@ use self::{
     interpreter_error::{
         EarlyReturn, EarlyReturnReason, InterpreterError, RuntimeError, RuntimeResult,
     },
-    lox_class::{LoxClass, LoxInstance},
+    lox_class::LoxClass,
     lox_function::LoxFunction,
     native_functions::NativeFnClock,
     runtime_value::RuntimeValue,
@@ -59,7 +59,11 @@ impl Interpreter {
     /// Execute statement
     fn execute(&mut self, statement: &Stmt) -> RuntimeResult<()> {
         match statement {
-            Stmt::Class { name, methods } => {
+            Stmt::Class {
+                name,
+                methods,
+                class_methods: _,
+            } => {
                 self.environment
                     .borrow_mut()
                     .define(&name.lexeme, RuntimeValue::Nil);
@@ -249,7 +253,7 @@ impl Interpreter {
             } => self.evaluate_function_call(callee, paran, arguments),
             Expr::Get { object, name } => {
                 if let RuntimeValue::Instance(instance) = self.evaluate(object)? {
-                    let value = LoxInstance::get(&instance, name);
+                    let value = instance.get(name);
                     match value {
                         Some(value) => Ok(value),
                         None => Err(RuntimeError::new(
@@ -269,7 +273,7 @@ impl Interpreter {
                 let object = self.evaluate(object)?;
                 if let RuntimeValue::Instance(instance) = object {
                     let value = self.evaluate(value)?;
-                    Ok(instance.as_ref().borrow_mut().set(name, value))
+                    Ok(instance.set(name, value))
                 } else {
                     Err(RuntimeError::new(
                         name,
