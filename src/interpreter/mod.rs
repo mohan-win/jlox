@@ -59,11 +59,7 @@ impl Interpreter {
     /// Execute statement
     fn execute(&mut self, statement: &Stmt) -> RuntimeResult<()> {
         match statement {
-            Stmt::Class {
-                name,
-                methods,
-                class_methods: _,
-            } => {
+            Stmt::Class { name, methods } => {
                 self.environment
                     .borrow_mut()
                     .define(&name.lexeme, RuntimeValue::Nil);

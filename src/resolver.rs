@@ -32,20 +32,12 @@ impl Resolver {
 
     fn resolve_stmt(&mut self, stmt: &mut Stmt) {
         match stmt {
-            Stmt::Class {
-                name,
-                methods,
-                class_methods,
-            } => {
+            Stmt::Class { name, methods } => {
                 let enclosing_class = self.current_class.take();
                 self.current_class = Some(ClassType::Class);
 
                 self.declare(name);
                 self.define(name);
-
-                class_methods.iter_mut().for_each(|class_method| {
-                    self.resolve_function(class_method, FunctionType::ClassMethod);
-                });
 
                 self.begin_scope(); // 'this' scope
                 self.scopes
@@ -276,7 +268,6 @@ enum FunctionType {
     Function,
     Initializer,
     Method,
-    ClassMethod,
 }
 
 enum ClassType {
