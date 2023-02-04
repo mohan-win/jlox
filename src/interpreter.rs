@@ -260,7 +260,7 @@ impl Interpreter {
                 arguments,
             } => self.evaluate_function_call(callee, paran, arguments),
             Expr::Get { object, name } => {
-                if let RuntimeValue::Instance(instance) = self.evaluate(object)? {
+                if let Some(instance) = self.evaluate(object)?.instance() {
                     let value = instance.get(name);
                     match value {
                         Some(value) => Ok(value),
@@ -278,8 +278,7 @@ impl Interpreter {
                 name,
                 value,
             } => {
-                let object = self.evaluate(object)?;
-                if let RuntimeValue::Instance(instance) = object {
+                if let Some(instance) = self.evaluate(object)?.instance() {
                     let value = self.evaluate(value)?;
                     Ok(instance.set(name, value))
                 } else {
@@ -299,7 +298,7 @@ impl Interpreter {
         paran: &Token,
         arguments: &Vec<Expr>,
     ) -> RuntimeResult {
-        if let RuntimeValue::Callable(function) = self.evaluate(callee)? {
+        if let Some(function) = self.evaluate(callee)?.callable() {
             let mut argument_vals = Vec::new();
             if function.arity() != arguments.len() {
                 Err(RuntimeError::new(
@@ -327,7 +326,7 @@ impl Interpreter {
         } else {
             Err(RuntimeError::new(
                 paran,
-                "Only functions and classes are callable",
+                "Only functions, classes, methods & static methods are callable",
             ))
         }
     }

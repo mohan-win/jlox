@@ -7,14 +7,34 @@ use std::fmt::{self, Debug};
 use std::ops::{Add, Div, Mul, Neg, Not, Sub};
 use std::rc::Rc;
 
-pub trait LoxCallable: fmt::Display + Debug {
+pub trait LoxCallable: AsLoxCallable + fmt::Display + Debug {
     fn arity(&self) -> usize;
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<RuntimeValue>) -> RuntimeResult;
 }
 
-pub trait LoxInstance: fmt::Display + Debug {
+pub trait LoxInstance: AsLoxInstance + fmt::Display + Debug {
     fn get(&self, name: &Token) -> Option<RuntimeValue>;
     fn set(&self, name: &Token, value: RuntimeValue) -> RuntimeValue;
+}
+
+pub trait LoxCallableInstance: LoxCallable + LoxInstance {}
+
+pub trait AsLoxCallable {
+    fn as_callable(self: Rc<Self>) -> Rc<dyn LoxCallable>;
+}
+impl<T: LoxCallable + 'static> AsLoxCallable for T {
+    fn as_callable(self: Rc<Self>) -> Rc<dyn LoxCallable> {
+        self
+    }
+}
+
+pub trait AsLoxInstance {
+    fn as_instance(self: Rc<Self>) -> Rc<dyn LoxInstance>;
+}
+impl<T: LoxInstance + 'static> AsLoxInstance for T {
+    fn as_instance(self: Rc<Self>) -> Rc<dyn LoxInstance> {
+        self
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -24,7 +44,44 @@ pub enum RuntimeValue {
     Boolean(bool),
     Nil,
     Callable(Rc<dyn LoxCallable>),
+    CallableInstance(Rc<dyn LoxCallableInstance>),
     Instance(Rc<dyn LoxInstance>),
+}
+
+impl RuntimeValue {
+    pub fn is_callable(&self) -> bool {
+        match self {
+            RuntimeValue::Callable(_) => true,
+            RuntimeValue::CallableInstance(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_instance(&self) -> bool {
+        match self {
+            RuntimeValue::Instance(_) => true,
+            RuntimeValue::CallableInstance(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Returns LoxCallable trait object if the runtime value contains one
+    pub fn callable(&self) -> Option<Rc<dyn LoxCallable>> {
+        match self {
+            RuntimeValue::Callable(callable) => Some(Rc::clone(callable)),
+            RuntimeValue::CallableInstance(callable) => Some(Rc::clone(callable).as_callable()),
+            _ => None,
+        }
+    }
+
+    /// Returns LoxInstance trait object if the runtime value contains one
+    pub fn instance(&self) -> Option<Rc<dyn LoxInstance>> {
+        match self {
+            RuntimeValue::Instance(instance) => Some(Rc::clone(instance)),
+            RuntimeValue::CallableInstance(instance) => Some(Rc::clone(instance).as_instance()),
+            _ => None,
+        }
+    }
 }
 
 impl Neg for RuntimeValue {
@@ -195,6 +252,7 @@ impl fmt::Display for RuntimeValue {
             Boolean(value) => write!(f, "{}", value),
             Callable(ptr) => write!(f, "{}", ptr),
             Instance(ptr) => write!(f, "{}", ptr),
+            CallableInstance(ptr) => write!(f, "{}", ptr),
         }
     }
 }

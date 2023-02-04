@@ -5,7 +5,7 @@ use crate::token::Token;
 use super::{
     interpreter_error::RuntimeResult,
     lox_function::LoxFunction,
-    runtime_value::{LoxCallable, LoxInstance, RuntimeValue},
+    runtime_value::{LoxCallable, LoxCallableInstance, LoxInstance, RuntimeValue},
     Interpreter,
 };
 
@@ -104,6 +104,8 @@ impl LoxInstance for LoxClass {
         panic!("Lox doesn't allow static fields on classes, only static methods");
     }
 }
+
+impl LoxCallableInstance for LoxClass {}
 
 #[derive(Debug)]
 struct ClassInstanceData {
