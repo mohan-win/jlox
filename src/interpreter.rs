@@ -62,7 +62,7 @@ impl Interpreter {
             Stmt::Class {
                 name,
                 methods,
-                class_methods: _,
+                class_methods,
             } => {
                 self.environment
                     .borrow_mut()
@@ -80,7 +80,15 @@ impl Interpreter {
                     );
                 });
 
-                let kclass = Rc::new(LoxClass::new(&name.lexeme, methods_map));
+                let mut class_methods_map: HashMap<String, Rc<LoxFunction>> = HashMap::new();
+                class_methods.iter().for_each(|class_method| {
+                    class_methods_map.insert(
+                        class_method.name.lexeme.clone(),
+                        Rc::new(LoxFunction::new(class_method, &self.environment, false)),
+                    );
+                });
+
+                let kclass = Rc::new(LoxClass::new(&name.lexeme, methods_map, class_methods_map));
 
                 self.environment
                     .borrow_mut()

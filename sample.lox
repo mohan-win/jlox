@@ -1,19 +1,16 @@
-class Cake {
-    init(flavour) {
-      this.flavour = flavour;
-      return;
-    }
-    taste(adjective) {
-      print "The " + this.flavour + " tastes very " + adjective + ".";
-    }
+class SomeClass {
+  method() {
+    print this.field;
+  }
+
+  class method() {
+    this.other_class_method();
+  }
+
+  class other_class_method() {
+    print "other_class_method";
+  }
 }
 
-fun init() {
-  return "This is some function called init";
-}
-
-var c = Cake("ok");
-c.init = init;
-print c.init();
-c.taste("good");
+SomeClass.method();
 

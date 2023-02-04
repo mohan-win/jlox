@@ -9,21 +9,25 @@ use super::{
     Interpreter,
 };
 
-pub mod lox_meta_class;
-
 /// Internal class definiation of a LoxClass.
 /// `Note:` This class definition is shared across all the instances of this class.
 #[derive(Debug)]
 struct LoxClassDefinition {
     name: String,
     methods: HashMap<String, Rc<LoxFunction>>,
+    class_methods: HashMap<String, Rc<LoxFunction>>,
 }
 
 impl LoxClassDefinition {
-    fn new(name: &str, methods: HashMap<String, Rc<LoxFunction>>) -> LoxClassDefinition {
+    fn new(
+        name: &str,
+        methods: HashMap<String, Rc<LoxFunction>>,
+        class_methods: HashMap<String, Rc<LoxFunction>>,
+    ) -> LoxClassDefinition {
         LoxClassDefinition {
             name: String::from(name),
             methods,
+            class_methods,
         }
     }
     fn find_method(&self, method_name: &str) -> Option<Rc<LoxFunction>> {
@@ -41,8 +45,22 @@ impl fmt::Display for LoxClassDefinition {
 pub struct LoxClass(Rc<LoxClassDefinition>);
 
 impl LoxClass {
-    pub fn new(name: &str, methods: HashMap<String, Rc<LoxFunction>>) -> LoxClass {
-        LoxClass(Rc::new(LoxClassDefinition::new(name, methods)))
+    pub fn new(
+        name: &str,
+        methods: HashMap<String, Rc<LoxFunction>>,
+        class_methods: HashMap<String, Rc<LoxFunction>>,
+    ) -> LoxClass {
+        LoxClass(Rc::new(LoxClassDefinition::new(
+            name,
+            methods,
+            class_methods,
+        )))
+    }
+    fn lookup_class_method(&self, name: &Token) -> Option<Rc<LoxFunction>> {
+        self.0
+            .class_methods
+            .get(&name.lexeme)
+            .map(|class_method| Rc::clone(class_method))
     }
 }
 
@@ -69,6 +87,21 @@ impl LoxCallable for LoxClass {
         } else {
             Ok(RuntimeValue::Instance(Rc::new(instance)))
         }
+    }
+}
+
+impl LoxInstance for LoxClass {
+    fn get(&self, name: &Token) -> Option<RuntimeValue> {
+        if let Some(class_method) = self.lookup_class_method(name) {
+            Some(RuntimeValue::Callable(Rc::new(class_method.bind(self))))
+        } else {
+            None
+        }
+    }
+
+    // ToDo::Update Resolver to disallow set expression directly on meta class instance.
+    fn set(&self, _name: &Token, _value: RuntimeValue) -> RuntimeValue {
+        panic!("Lox doesn't allow static fields on classes, only static methods");
     }
 }
 
