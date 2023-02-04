@@ -43,11 +43,17 @@ impl Resolver {
                 self.declare(name);
                 self.define(name);
 
+                self.begin_scope(); // class 'this' scope
+                self.scopes
+                    .last_mut()
+                    .unwrap()
+                    .insert(String::from("this"), true);
                 class_methods.iter_mut().for_each(|class_method| {
                     self.resolve_function(class_method, FunctionType::ClassMethod);
                 });
+                self.end_scope();
 
-                self.begin_scope(); // 'this' scope
+                self.begin_scope(); // instance 'this' scope
                 self.scopes
                     .last_mut()
                     .unwrap()

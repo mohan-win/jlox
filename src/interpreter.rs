@@ -92,7 +92,7 @@ impl Interpreter {
 
                 self.environment
                     .borrow_mut()
-                    .assign(name, RuntimeValue::Callable(kclass))?;
+                    .assign(name, RuntimeValue::CallableInstance(kclass))?;
             }
             Stmt::Var { name, expression } => {
                 let mut value = RuntimeValue::Nil;
