@@ -49,7 +49,11 @@ impl Resolver {
                     .unwrap()
                     .insert(String::from("this"), true);
                 class_methods.iter_mut().for_each(|class_method| {
-                    self.resolve_function(class_method, FunctionType::ClassMethod);
+                    let mut declaration = FunctionType::ClassMethod;
+                    if class_method.name.lexeme.eq("init") {
+                        declaration = FunctionType::ClassInitializer;
+                    }
+                    self.resolve_function(class_method, declaration);
                 });
                 self.end_scope();
 
@@ -108,7 +112,9 @@ impl Resolver {
             Stmt::Return { keyword, value } => {
                 if let Some(fun_type) = self.current_function {
                     value.as_mut().and_then(|value| {
-                        if fun_type == FunctionType::Initializer {
+                        if fun_type == FunctionType::Initializer
+                            || fun_type == FunctionType::ClassInitializer
+                        {
                             self.error(&ResolverError::new(
                                 keyword,
                                 "Can't return a value from constructor",
@@ -202,6 +208,12 @@ impl Resolver {
     }
 
     fn resolve_function(&mut self, fun: &mut Fun, fun_type: FunctionType) {
+        if fun_type == FunctionType::ClassInitializer && fun.params.len() > 0 {
+            self.error(&ResolverError::new(
+                &fun.name,
+                "Can't have params for \"class init\"",
+            ));
+        }
         let enclosing_function = self.current_function.take();
         self.current_function = Some(fun_type);
 
@@ -282,6 +294,7 @@ enum FunctionType {
     Function,
     Initializer,
     Method,
+    ClassInitializer,
     ClassMethod,
 }
 
