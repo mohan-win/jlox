@@ -9,9 +9,9 @@ class Sweet {
 
   class makeCake() {
     if(this.isSugarFree) {
-      return Sweet("Cake [Sugar Free]");
+      return this("Cake [Sugar Free]");
     } else {
-      return Sweet("Cake");
+      return this("Cake");
     }
   }
 
@@ -25,6 +25,7 @@ class Sweet {
 
   init(name) {
     this.name = name;
+    this.topping = nil;
   }
 
   addCreamTopping() {
@@ -41,24 +42,9 @@ class Sweet {
   }
 }
 
+var sweet = Sweet.init()("laddu");
+sweet.whoAmI();
+
 var cake = Sweet.makeCake();
-cake.addCreamTopping();
-var halwa = Sweet.makeHalwa();
-halwa.addCreamTopping();
-
 cake.whoAmI();
-halwa.whoAmI();
-
-Sweet.toggleSugarFree(false);
-
-cake = Sweet.makeCake();
-cake.topping = nil;
-var halwa = Sweet.makeHalwa();
-halwa.topping = nil;
-
-cake.whoAmI();
-halwa.whoAmI();
-
-var sweet = Sweet.init()();
-print sweet.isSugarFree;
 

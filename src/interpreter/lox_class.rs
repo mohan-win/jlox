@@ -64,8 +64,8 @@ impl LoxClass {
             assert!(
                 class_initializer.arity() == 0,
                 "Can't call class init with params"
-            ); // ToDo:: ensure this in resolver
-            let class_initializer = class_initializer.bind(&lox_class);
+            );
+            let class_initializer = class_initializer.bind_callable_instance(&lox_class);
             class_initializer.call(interpreter, Vec::new())?;
         }
 
@@ -117,7 +117,9 @@ impl LoxInstance for LoxClass {
             .map(|value| value.clone())
             .or_else(|| {
                 if let Some(class_method) = self.lookup_class_method(&name.lexeme) {
-                    Some(RuntimeValue::Callable(Rc::new(class_method.bind(self))))
+                    Some(RuntimeValue::Callable(Rc::new(
+                        class_method.bind_callable_instance(self),
+                    )))
                 } else {
                     None
                 }
