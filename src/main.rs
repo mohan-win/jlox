@@ -69,7 +69,7 @@ fn run(source: String, interpreter: &mut Interpreter) {
         let mut resolver = Resolver::new();
         resolver.resolve_stmts(&mut stmts);
         if resolver.get_num_of_resolver_errs() == 0 {
-            println!("{:#?}", stmts);
+            //println!("{:#?}", stmts);
             if let Err(err) = interpreter.interpret(&stmts) {
                 error_at_runtime(err);
             }

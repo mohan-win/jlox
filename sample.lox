@@ -1,16 +1,53 @@
-class SomeClass {
-  method() {
-    print this.field;
+class Sweet {
+  class init() {
+    this.isSugarFree = true;
   }
 
-  class method() {
-    this.other_class_method();
+  class toggleSugarFree(sugarFree) {
+    this.isSugarFree = sugarFree;
   }
 
-  class other_class_method() {
-    print "other_class_method";
+  class makeCake() {
+    if(this.isSugarFree) {
+      return Sweet("Cake [Sugar Free]");
+    } else {
+      return Sweet("Cake");
+    }
+  }
+
+  class makeHalwa() {
+    if(this.isSugarFree) {
+      return Sweet("Halwa [Sugar Free]");
+    } else {
+      return Sweet("Halwa");
+    }
+  }
+
+  init(name) {
+    this.name = name;
+  }
+
+  addCreamTopping() {
+    this.topping = "Cream";
+  }
+
+  whoAmI() {
+    if (this.topping != nil) {
+      print "I'm " + name + " with " + this.topping;
+    } else {
+      print "I'm " + name;
+    }
+    
   }
 }
 
-SomeClass.method();
+var cake = Sweet.makeCake();
+var halwa = Sweet.makeHalwa();
 
+cake.whoAmI();
+halwa.whoAmI();
+
+Sweet.toggleSugarFree(false);
+
+cake = Sweet.makeCake();
+var halwa = Sweet.makeHalwa();

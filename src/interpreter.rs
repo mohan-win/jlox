@@ -88,7 +88,12 @@ impl Interpreter {
                     );
                 });
 
-                let kclass = Rc::new(LoxClass::new(&name.lexeme, methods_map, class_methods_map));
+                let kclass = Rc::new(LoxClass::new(
+                    &name.lexeme,
+                    methods_map,
+                    class_methods_map,
+                    self,
+                )?);
 
                 self.environment
                     .borrow_mut()
