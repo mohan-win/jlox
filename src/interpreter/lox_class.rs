@@ -65,7 +65,7 @@ impl LoxClass {
                 class_initializer.arity() == 0,
                 "Can't call class init with params"
             ); // ToDo:: ensure this in resolver
-
+            let class_initializer = class_initializer.bind(&lox_class);
             class_initializer.call(interpreter, Vec::new())?;
         }
 

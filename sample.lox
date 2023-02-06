@@ -33,16 +33,18 @@ class Sweet {
 
   whoAmI() {
     if (this.topping != nil) {
-      print "I'm " + name + " with " + this.topping;
+      print "I'm " + this.name + " with " + this.topping;
     } else {
-      print "I'm " + name;
+      print "I'm " + this.name;
     }
     
   }
 }
 
 var cake = Sweet.makeCake();
+cake.addCreamTopping();
 var halwa = Sweet.makeHalwa();
+halwa.addCreamTopping();
 
 cake.whoAmI();
 halwa.whoAmI();
@@ -50,4 +52,10 @@ halwa.whoAmI();
 Sweet.toggleSugarFree(false);
 
 cake = Sweet.makeCake();
+cake.topping = nil;
 var halwa = Sweet.makeHalwa();
+halwa.topping = nil;
+
+cake.whoAmI();
+halwa.whoAmI();
+
