@@ -1,50 +1,19 @@
-class Sweet {
-  class init() {
-    this.isSugarFree = true;
+class Circle {
+  class PI {
+    return 3.14153;
+  }
+  
+  init(r) {
+    this.radius = r;
+  }
+  area {
+    return Circle.PI * this.radius * this.radius;
   }
 
-  class toggleSugarFree(sugarFree) {
-    this.isSugarFree = sugarFree;
-  }
-
-  class makeCake() {
-    if(this.isSugarFree) {
-      return this("Cake [Sugar Free]");
-    } else {
-      return this("Cake");
-    }
-  }
-
-  class makeHalwa() {
-    if(this.isSugarFree) {
-      return Sweet("Halwa [Sugar Free]");
-    } else {
-      return Sweet("Halwa");
-    }
-  }
-
-  init(name) {
-    this.name = name;
-    this.topping = nil;
-  }
-
-  addCreamTopping() {
-    this.topping = "Cream";
-  }
-
-  whoAmI() {
-    if (this.topping != nil) {
-      print "I'm " + this.name + " with " + this.topping;
-    } else {
-      print "I'm " + this.name;
-    }
-    
+  class printArea(circle) {
+    print circle.area;
   }
 }
 
-var sweet = Sweet.init()("laddu");
-sweet.whoAmI();
-
-var cake = Sweet.makeCake();
-cake.whoAmI();
-
+var circle = Circle(10);
+Circle.printArea(circle);

@@ -185,10 +185,6 @@ impl<'a> Parser<'a> {
         } else {
             is_getter = true;
         }
-        self.consume(
-            &TokenType::LEFT_PARAN,
-            format!("Expect '(' after {} name", kind).as_str(),
-        )?;
 
         self.consume(
             &TokenType::LEFT_BRACE,
