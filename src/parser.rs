@@ -96,7 +96,7 @@ impl<'a> Parser<'a> {
         let stmt = if self.matches(&[TokenType::CLASS]) {
             self.class_declaration()
         } else if self.matches(&[TokenType::FUN]) {
-            self.function("function")
+            self.function("function").map(|fun| Stmt::Function(fun))
         } else if self.matches(&[TokenType::VAR]) {
             self.var_declaration()
         } else {
@@ -119,14 +119,24 @@ impl<'a> Parser<'a> {
 
         self.consume(&TokenType::LEFT_BRACE, "Expect '{' after the class name")?;
         let mut methods = Vec::new();
+        let mut getters = Vec::new();
         let mut class_methods = Vec::new();
+        let mut class_getters = Vec::new();
         while !self.check(&TokenType::RIGHT_BRACE) && !self.is_at_end() {
             if self.matches(&[TokenType::CLASS]) {
-                if let Stmt::Function(fun) = self.function("static method")? {
+                let fun = self.function("static method or static getter")?;
+                if fun.is_getter {
+                    class_getters.push(fun)
+                } else {
                     class_methods.push(fun)
                 }
-            } else if let Stmt::Function(fun) = self.function("method")? {
-                methods.push(fun)
+            } else {
+                let fun = self.function("method or getter")?;
+                if fun.is_getter {
+                    getters.push(fun);
+                } else {
+                    methods.push(fun);
+                }
             }
         }
         self.consume(&TokenType::RIGHT_BRACE, "End class definition with '}'")?;
@@ -134,50 +144,63 @@ impl<'a> Parser<'a> {
         Ok(Stmt::Class {
             name,
             methods,
+            getters,
             class_methods,
+            class_getters,
         })
     }
 
-    fn function(&mut self, kind: &str) -> ParserResult<Stmt> {
+    fn function(&mut self, kind: &str) -> ParserResult<Fun> {
         let name = self
             .consume(
                 &TokenType::IDENTIFIER,
                 format!("Expect {} name", kind).as_str(),
             )?
             .clone();
+        let mut params = Vec::new();
+        let mut is_getter = false;
+        if self.matches(&[TokenType::LEFT_PARAN]) {
+            if !self.check(&TokenType::RIGHT_PARAN) {
+                loop {
+                    if params.len() >= 255 {
+                        self.error(ParserError::new(
+                            self.peek(),
+                            format!("Can't allow more than 255 params for a {}", kind).as_str(),
+                        ))
+                    }
+                    let param = self.consume(
+                        &TokenType::IDENTIFIER,
+                        format!("Expect {} parameter", kind).as_str(),
+                    )?;
+                    params.push(param.clone());
+                    if !self.matches(&[TokenType::COMMA]) {
+                        break;
+                    }
+                }
+            }
+            self.consume(
+                &TokenType::RIGHT_PARAN,
+                format!("Expect ')' after {} parameters", kind).as_str(),
+            )?;
+        } else {
+            is_getter = true;
+        }
         self.consume(
             &TokenType::LEFT_PARAN,
             format!("Expect '(' after {} name", kind).as_str(),
         )?;
-        let mut params = Vec::new();
-        if !self.check(&TokenType::RIGHT_PARAN) {
-            loop {
-                if params.len() >= 255 {
-                    self.error(ParserError::new(
-                        self.peek(),
-                        format!("Can't allow more than 255 params for a {}", kind).as_str(),
-                    ))
-                }
-                let param = self.consume(
-                    &TokenType::IDENTIFIER,
-                    format!("Expect {} parameter", kind).as_str(),
-                )?;
-                params.push(param.clone());
-                if !self.matches(&[TokenType::COMMA]) {
-                    break;
-                }
-            }
-        }
-        self.consume(
-            &TokenType::RIGHT_PARAN,
-            format!("Expect ')' after {} parameters", kind).as_str(),
-        )?;
+
         self.consume(
             &TokenType::LEFT_BRACE,
             format!("Expect '{{' before start of a {} body", kind).as_str(),
         )?;
         let body = self.block()?;
-        Ok(Stmt::Function(Fun { name, params, body }))
+        Ok(Fun {
+            name,
+            params,
+            body,
+            is_getter,
+        })
     }
 
     fn var_declaration(&mut self) -> ParserResult<Stmt> {

@@ -13,7 +13,7 @@ pub trait LoxCallable: AsLoxCallable + fmt::Display + Debug {
 }
 
 pub trait LoxInstance: AsLoxInstance + fmt::Display + Debug {
-    fn get(&self, name: &Token) -> Option<RuntimeValue>;
+    fn get(&self, name: &Token, interpreter: &mut Interpreter) -> Option<RuntimeValue>;
     fn set(&self, name: &Token, value: RuntimeValue) -> RuntimeValue;
 }
 

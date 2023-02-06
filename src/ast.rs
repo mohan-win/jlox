@@ -63,6 +63,7 @@ pub struct Fun {
     pub name: Token,
     pub params: Vec<Token>,
     pub body: Vec<Stmt>,
+    pub is_getter: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -70,7 +71,9 @@ pub enum Stmt {
     Class {
         name: Token,
         methods: Vec<Fun>,
+        getters: Vec<Fun>,
         class_methods: Vec<Fun>,
+        class_getters: Vec<Fun>,
     },
     Function(Fun),
     Var {

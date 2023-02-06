@@ -15,7 +15,9 @@ use super::{
 struct LoxClassDefinition {
     name: String,
     methods: HashMap<String, Rc<LoxFunction>>,
+    getters: HashMap<String, Rc<LoxFunction>>,
     class_methods: HashMap<String, Rc<LoxFunction>>,
+    class_getters: HashMap<String, Rc<LoxFunction>>,
     class_fields: HashMap<String, RuntimeValue>,
 }
 
@@ -23,12 +25,16 @@ impl LoxClassDefinition {
     fn new(
         name: &str,
         methods: HashMap<String, Rc<LoxFunction>>,
+        getters: HashMap<String, Rc<LoxFunction>>,
         class_methods: HashMap<String, Rc<LoxFunction>>,
+        class_getters: HashMap<String, Rc<LoxFunction>>,
     ) -> LoxClassDefinition {
         LoxClassDefinition {
             name: String::from(name),
             methods,
+            getters,
             class_methods,
+            class_getters,
             class_fields: HashMap::new(),
         }
     }
@@ -50,13 +56,17 @@ impl LoxClass {
     pub fn new(
         name: &str,
         methods: HashMap<String, Rc<LoxFunction>>,
+        getters: HashMap<String, Rc<LoxFunction>>,
         class_methods: HashMap<String, Rc<LoxFunction>>,
+        class_getters: HashMap<String, Rc<LoxFunction>>,
         interpreter: &mut Interpreter,
     ) -> RuntimeResult<LoxClass> {
         let lox_class = LoxClass(Rc::new(RefCell::new(LoxClassDefinition::new(
             name,
             methods,
+            getters,
             class_methods,
+            class_getters,
         ))));
 
         // Call "class 'init'" method if it's there
@@ -78,6 +88,25 @@ impl LoxClass {
             .class_methods
             .get(class_method_name)
             .map(|class_method| Rc::clone(class_method))
+    }
+
+    fn get_from_class_getter(
+        &self,
+        name: &str,
+        interpreter: &mut Interpreter,
+    ) -> Option<RuntimeValue> {
+        self.0
+            .as_ref()
+            .borrow()
+            .class_getters
+            .get(name)
+            .map(|class_getter| {
+                let class_getter = class_getter.bind_callable_instance(self);
+                assert!(class_getter.arity() == 0, "Getter can't have any arguments");
+                class_getter
+                    .call(interpreter, vec![])
+                    .unwrap_or(RuntimeValue::Nil) // If getter fails with runtime error, returning 'Nil' and eating the err!!
+            })
     }
 }
 
@@ -108,13 +137,14 @@ impl LoxCallable for LoxClass {
 }
 
 impl LoxInstance for LoxClass {
-    fn get(&self, name: &Token) -> Option<RuntimeValue> {
+    fn get(&self, name: &Token, interpreter: &mut Interpreter) -> Option<RuntimeValue> {
         self.0
             .as_ref()
             .borrow()
             .class_fields
             .get(name.lexeme.as_str())
             .map(|value| value.clone())
+            .or_else(|| self.get_from_class_getter(&name.lexeme, interpreter))
             .or_else(|| {
                 if let Some(class_method) = self.lookup_class_method(&name.lexeme) {
                     Some(RuntimeValue::Callable(Rc::new(
@@ -163,16 +193,34 @@ impl ClassInstance {
             .borrow()
             .find_method(&name.lexeme)
     }
+    fn get_from_getter(&self, name: &str, interpreter: &mut Interpreter) -> Option<RuntimeValue> {
+        self.0
+            .as_ref()
+            .borrow()
+            .kclass
+            .as_ref()
+            .borrow()
+            .getters
+            .get(name)
+            .map(|getter| {
+                let getter = getter.bind(self);
+                assert!(getter.arity() == 0, "Getter can't have any arguments");
+                getter
+                    .call(interpreter, vec![])
+                    .unwrap_or(RuntimeValue::Nil) // If getter fails with runtime error, returning 'Nil' and eating the err!!
+            })
+    }
 }
 
 impl LoxInstance for ClassInstance {
-    fn get(&self, name: &Token) -> Option<RuntimeValue> {
+    fn get(&self, name: &Token, interpreter: &mut Interpreter) -> Option<RuntimeValue> {
         self.0
             .as_ref()
             .borrow()
             .fields
             .get(&name.lexeme)
             .map(|field| field.clone())
+            .or_else(|| self.get_from_getter(&name.lexeme, interpreter))
             .or_else(|| {
                 if let Some(method) = self.lookup_method(name) {
                     Some(RuntimeValue::Callable(Rc::new(method.bind(self))))

@@ -62,7 +62,9 @@ impl Interpreter {
             Stmt::Class {
                 name,
                 methods,
+                getters,
                 class_methods,
+                class_getters,
             } => {
                 self.environment
                     .borrow_mut()
@@ -79,6 +81,13 @@ impl Interpreter {
                         )),
                     );
                 });
+                let mut getters_map: HashMap<String, Rc<LoxFunction>> = HashMap::new();
+                getters.iter().for_each(|getter| {
+                    getters_map.insert(
+                        getter.name.lexeme.clone(),
+                        Rc::new(LoxFunction::new(getter, &self.environment, false)),
+                    );
+                });
 
                 let mut class_methods_map: HashMap<String, Rc<LoxFunction>> = HashMap::new();
                 class_methods.iter().for_each(|class_method| {
@@ -91,11 +100,20 @@ impl Interpreter {
                         )),
                     );
                 });
+                let mut class_getter_map: HashMap<String, Rc<LoxFunction>> = HashMap::new();
+                class_getters.iter().for_each(|class_getter| {
+                    class_getter_map.insert(
+                        class_getter.name.lexeme.clone(),
+                        Rc::new(LoxFunction::new(class_getter, &self.environment, false)),
+                    );
+                });
 
                 let kclass = Rc::new(LoxClass::new(
                     &name.lexeme,
                     methods_map,
+                    getters_map,
                     class_methods_map,
+                    class_getter_map,
                     self,
                 )?);
 
@@ -270,7 +288,7 @@ impl Interpreter {
             } => self.evaluate_function_call(callee, paran, arguments),
             Expr::Get { object, name } => {
                 if let Some(instance) = self.evaluate(object)?.instance() {
-                    let value = instance.get(name);
+                    let value = instance.get(name, self);
                     match value {
                         Some(value) => Ok(value),
                         None => Err(RuntimeError::new(

@@ -35,7 +35,9 @@ impl Resolver {
             Stmt::Class {
                 name,
                 methods,
+                getters,
                 class_methods,
+                class_getters,
             } => {
                 let enclosing_class = self.current_class.take();
                 self.current_class = Some(ClassType::Class);
@@ -55,6 +57,9 @@ impl Resolver {
                     }
                     self.resolve_function(class_method, declaration);
                 });
+                class_getters.iter_mut().for_each(|class_getter| {
+                    self.resolve_function(class_getter, FunctionType::ClassGetter)
+                });
                 self.end_scope();
 
                 self.begin_scope(); // instance 'this' scope
@@ -69,6 +74,9 @@ impl Resolver {
                     }
                     self.resolve_function(method, declaration);
                 });
+                getters
+                    .iter_mut()
+                    .for_each(|getter| self.resolve_function(getter, FunctionType::Getter));
                 self.end_scope(); // end of 'this' scope
 
                 self.current_class = enclosing_class;
@@ -208,12 +216,6 @@ impl Resolver {
     }
 
     fn resolve_function(&mut self, fun: &mut Fun, fun_type: FunctionType) {
-        if fun_type == FunctionType::ClassInitializer && fun.params.len() > 0 {
-            self.error(&ResolverError::new(
-                &fun.name,
-                "Can't have params for \"class init\"",
-            ));
-        }
         let enclosing_function = self.current_function.take();
         self.current_function = Some(fun_type);
 
@@ -294,8 +296,10 @@ enum FunctionType {
     Function,
     Initializer,
     Method,
+    Getter,
     ClassInitializer,
     ClassMethod,
+    ClassGetter,
 }
 
 enum ClassType {
