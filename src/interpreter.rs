@@ -84,7 +84,11 @@ impl Interpreter {
                 class_methods.iter().for_each(|class_method| {
                     class_methods_map.insert(
                         class_method.name.lexeme.clone(),
-                        Rc::new(LoxFunction::new(class_method, &self.environment, false)),
+                        Rc::new(LoxFunction::new(
+                            class_method,
+                            &self.environment,
+                            class_method.name.lexeme.eq("init"),
+                        )),
                     );
                 });
 
