@@ -24,7 +24,7 @@ impl LoxClassDefinition {
             methods,
         }
     }
-    pub fn find_methods(&self, method_name: &str) -> Option<Rc<LoxFunction>> {
+    pub fn find_method(&self, method_name: &str) -> Option<Rc<LoxFunction>> {
         self.methods.get(method_name).map(|method| method.clone())
     }
 }
@@ -52,7 +52,7 @@ impl fmt::Display for LoxClass {
 
 impl LoxCallable for LoxClass {
     fn arity(&self) -> usize {
-        if let Some(initializer) = self.0.find_methods("init") {
+        if let Some(initializer) = self.0.find_method("init") {
             initializer.arity()
         } else {
             0
@@ -61,7 +61,7 @@ impl LoxCallable for LoxClass {
 
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<RuntimeValue>) -> RuntimeResult {
         let instance = ClassInstance::new(self);
-        if let Some(initializer) = self.0.find_methods("init") {
+        if let Some(initializer) = self.0.find_method("init") {
             let initializer = initializer.bind(&instance);
             initializer.call(interpreter, arguments)
         } else {
@@ -86,8 +86,8 @@ impl ClassInstance {
             fields: HashMap::new(),
         })))
     }
-    fn lookup_methods(&self, name: &Token) -> Option<Rc<LoxFunction>> {
-        self.0.as_ref().borrow().kclass.find_methods(&name.lexeme)
+    fn lookup_method(&self, name: &Token) -> Option<Rc<LoxFunction>> {
+        self.0.as_ref().borrow().kclass.find_method(&name.lexeme)
     }
 }
 
@@ -100,7 +100,7 @@ impl LoxInstance for ClassInstance {
             .get(&name.lexeme)
             .map(|field| field.clone())
             .or_else(|| {
-                if let Some(method) = self.lookup_methods(name) {
+                if let Some(method) = self.lookup_method(name) {
                     Some(RuntimeValue::Callable(Rc::new(method.bind(self))))
                 } else {
                     None
