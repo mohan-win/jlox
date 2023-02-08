@@ -1,14 +1,27 @@
-class Doughnut {
+class Sweet {
+  init(flavor) {
+    this.flavor = flavor;
+  }
   cook() {
-    print "Fry until golden brown.";
+    this.flavor = "cooked " + this.flavor;
   }
 }
 
-class BostonCream < Doughnut {
+class Cake < Sweet {
+  init(type, flavor) {
+    this.type = type;
+    super.init(flavor);
+  }
+
   cook() {
+    this.type = "cooked " + this.type;
     super.cook();
-    print "Pipe full of custard and coat with chocolate";
+  }
+
+  whoAmI() {
+    print "This is a " + this.type + " of flavor " + this.flavor;
   }
 }
 
-BostonCream().cook();
+var c = Cake("Cheese cake", "Strawberry");
+c.whoAmI();

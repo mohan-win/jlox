@@ -347,8 +347,8 @@ impl Interpreter {
                                 .as_any()
                                 .downcast::<ClassInstance>()
                                 .expect("'this' should refer to a class instance");
-                            method.bind(&this_instance);
-                            Ok(RuntimeValue::Callable(method))
+                            let method = method.bind(&this_instance);
+                            Ok(RuntimeValue::Callable(Rc::new(method)))
                         } else {
                             Err(RuntimeError::new(
                                 keyword,
