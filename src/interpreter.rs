@@ -19,7 +19,7 @@ use self::{
     lox_class::{ClassInstance, LoxClass},
     lox_function::LoxFunction,
     native_functions::NativeFnClock,
-    runtime_value::{LoxCallable, LoxInstance, RuntimeValue},
+    runtime_value::{LoxCallable, RuntimeValue},
 };
 
 pub struct Interpreter {
