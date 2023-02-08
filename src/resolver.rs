@@ -59,12 +59,8 @@ impl Resolver {
                 });
 
                 if let Some(super_class) = super_class {
-                    let previous_class = self.current_class.take();
                     self.current_class = Some(ClassType::SubClass);
-
                     self.resolve_expr(super_class);
-
-                    self.current_class = previous_class;
 
                     self.begin_scope(); // 'super' scope
                     self.scopes
