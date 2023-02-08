@@ -85,8 +85,7 @@ impl Interpreter {
 
                 // 'super' environment
                 super_class.as_ref().map(|super_class| {
-                    let existing_environment = Rc::clone(&self.environment);
-                    let mut environment = Environment::new_with(existing_environment);
+                    let mut environment = Environment::new_with(Rc::clone(&self.environment));
                     environment.define(
                         "super",
                         RuntimeValue::Callable(Rc::clone(super_class) as Rc<dyn LoxCallable>),
@@ -359,7 +358,7 @@ impl Interpreter {
                     } else {
                         Err(RuntimeError::new(
                             method,
-                            format!("Unable to find property {} on super.", method.lexeme).as_str(),
+                            format!("Unable to find property {}", method.lexeme).as_str(),
                         ))
                     }
                 } else {

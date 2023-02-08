@@ -59,7 +59,13 @@ impl Resolver {
                 });
 
                 if let Some(super_class) = super_class {
+                    let previous_class = self.current_class.take();
+                    self.current_class = Some(ClassType::SubClass);
+
                     self.resolve_expr(super_class);
+
+                    self.current_class = previous_class;
+
                     self.begin_scope(); // 'super' scope
                     self.scopes
                         .last_mut()
@@ -80,7 +86,7 @@ impl Resolver {
                     }
                     self.resolve_function(method, declaration);
                 });
-                
+
                 self.end_scope(); // end of 'this' scope
 
                 if let Some(_super_class) = super_class {
@@ -166,7 +172,17 @@ impl Resolver {
                 keyword,
                 method: _,
                 depth,
-            } => *depth = self.resolve_local_depth(&keyword),
+            } => match self.current_class {
+                None => self.error(&ResolverError::new(
+                    &keyword,
+                    "Can't use 'super' outside a class",
+                )),
+                Some(ClassType::Class) => self.error(&ResolverError::new(
+                    &keyword,
+                    "Can't use 'super' keyword on a class without a super class",
+                )),
+                Some(ClassType::SubClass) => *depth = self.resolve_local_depth(&keyword),
+            },
             Expr::This { keyword, depth } => {
                 if let Some(_) = self.current_class {
                     *depth = self.resolve_local_depth(keyword);
@@ -311,6 +327,7 @@ enum FunctionType {
 
 enum ClassType {
     Class,
+    SubClass,
 }
 
 #[derive(Debug)]
