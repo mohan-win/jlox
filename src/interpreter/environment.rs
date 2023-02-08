@@ -50,7 +50,13 @@ impl Environment {
         let value = self.env_at_depth(depth, |env| {
             env.values
                 .get(name)
-                .expect("Local names should be found in the environment at exact depth")
+                .expect(
+                    format!(
+                        "Local name {} should be found in the environment at exact depth {}",
+                        name, depth
+                    )
+                    .as_str(),
+                )
                 .clone()
         });
         Ok(value)
