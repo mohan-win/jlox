@@ -40,7 +40,10 @@ impl Resolver {
                 let enclosing_class = self.current_class.take();
                 self.current_class = Some(ClassType::Class);
 
-                if let Some(super_class) = super_class {
+                self.declare(name);
+                self.define(name);
+
+                super_class.as_ref().map(|super_class| {
                     if let Expr::Variable {
                         name: super_class_name,
                         ..
@@ -53,18 +56,23 @@ impl Resolver {
                             ))
                         }
                     }
+                });
 
+                if let Some(super_class) = super_class {
                     self.resolve_expr(super_class);
+                    self.begin_scope(); // 'super' scope
+                    self.scopes
+                        .last_mut()
+                        .unwrap()
+                        .insert(String::from("super"), true);
                 }
-                
-                self.declare(name);
-                self.define(name);
 
                 self.begin_scope(); // 'this' scope
                 self.scopes
                     .last_mut()
                     .unwrap()
                     .insert(String::from("this"), true);
+
                 methods.iter_mut().for_each(|method| {
                     let mut declaration = FunctionType::Method;
                     if method.name.lexeme == "init" {
@@ -72,7 +80,12 @@ impl Resolver {
                     }
                     self.resolve_function(method, declaration);
                 });
+                
                 self.end_scope(); // end of 'this' scope
+
+                if let Some(_super_class) = super_class {
+                    self.end_scope(); // end of 'super' scope
+                }
 
                 self.current_class = enclosing_class;
             }
@@ -149,6 +162,11 @@ impl Resolver {
                 }
                 *depth = self.resolve_local_depth(name)
             }
+            Expr::Super {
+                keyword,
+                method: _,
+                depth,
+            } => *depth = self.resolve_local_depth(&keyword),
             Expr::This { keyword, depth } => {
                 if let Some(_) = self.current_class {
                     *depth = self.resolve_local_depth(keyword);

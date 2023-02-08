@@ -16,10 +16,10 @@ use self::{
     interpreter_error::{
         EarlyReturn, EarlyReturnReason, InterpreterError, RuntimeError, RuntimeResult,
     },
-    lox_class::LoxClass,
+    lox_class::{ClassInstance, LoxClass},
     lox_function::LoxFunction,
     native_functions::NativeFnClock,
-    runtime_value::RuntimeValue,
+    runtime_value::{LoxCallable, LoxInstance, RuntimeValue},
 };
 
 pub struct Interpreter {
@@ -67,19 +67,32 @@ impl Interpreter {
                 let mut super_lox_class = None;
                 if let Some(super_class) = super_class {
                     if let RuntimeValue::Callable(super_class) = self.evaluate(super_class)? {
-                        if let Ok(lox_class) = super_class.as_any().downcast::<LoxClass>() {
-                            super_lox_class = Some(lox_class)
-                        } else {
-                            return Err(RuntimeError::new(name, "Super class must be a class"));
-                        }
+                        super_lox_class = Some(
+                            super_class
+                                .as_any()
+                                .downcast::<LoxClass>()
+                                .expect("Super class must be a class"),
+                        );
                     } else {
                         return Err(RuntimeError::new(name, "Super class must be a class"));
                     }
                 }
+                let super_class = super_lox_class;
 
                 self.environment
                     .borrow_mut()
                     .define(&name.lexeme, RuntimeValue::Nil);
+
+                // 'super' environment
+                super_class.as_ref().map(|super_class| {
+                    let existing_environment = Rc::clone(&self.environment);
+                    let mut environment = Environment::new_with(existing_environment);
+                    environment.define(
+                        "super",
+                        RuntimeValue::Callable(Rc::clone(super_class) as Rc<dyn LoxCallable>),
+                    );
+                    self.environment = Rc::new(RefCell::new(environment));
+                });
 
                 let mut methods_map: HashMap<String, Rc<LoxFunction>> = HashMap::new();
                 methods.iter().for_each(|method| {
@@ -93,7 +106,14 @@ impl Interpreter {
                     );
                 });
 
-                let kclass = Rc::new(LoxClass::new(&name.lexeme, super_lox_class, methods_map));
+                // Pop/discard 'super' environment
+                super_class.as_ref().map(|_| {
+                    let enclosing_environment =
+                        self.environment.as_ref().borrow_mut().take_enclosing();
+                    enclosing_environment.map(|env| self.environment = env);
+                });
+
+                let kclass = Rc::new(LoxClass::new(&name.lexeme, super_class, methods_map));
 
                 self.environment
                     .borrow_mut()
@@ -242,6 +262,11 @@ impl Interpreter {
                 Some(depth) => self.environment.borrow().get_at(&name.lexeme, *depth),
                 None => self.globals.borrow().get(name),
             },
+            Expr::Super {
+                keyword,
+                method,
+                depth,
+            } => self.evaluate_super(keyword, method, depth),
             Expr::This { keyword, depth } => match depth {
                 Some(depth) => self.environment.borrow().get_at(&keyword.lexeme, *depth),
                 None => {
@@ -294,6 +319,54 @@ impl Interpreter {
                     ))
                 }
             }
+        }
+    }
+
+    fn evaluate_super(
+        &mut self,
+        keyword: &Token,
+        method: &Token,
+        depth: &Option<usize>,
+    ) -> RuntimeResult {
+        match depth {
+            Some(depth) => {
+                if let RuntimeValue::Callable(super_class) =
+                    self.environment.borrow().get_at(&keyword.lexeme, *depth)?
+                {
+                    let super_lox_class = super_class
+                        .as_any()
+                        .downcast::<LoxClass>()
+                        .expect("'super' doesn't refer to a class");
+                    if let Some(method) = super_lox_class.find_method(&method.lexeme) {
+                        let this = self
+                            .environment
+                            .as_ref()
+                            .borrow()
+                            .get_at("this", depth - 1)?; // Note: depth - 1
+                        if let RuntimeValue::Instance(this_instance_obj) = this {
+                            let this_instance = this_instance_obj
+                                .as_any()
+                                .downcast::<ClassInstance>()
+                                .expect("'this' should refer to a class instance");
+                            method.bind(&this_instance);
+                            Ok(RuntimeValue::Callable(method))
+                        } else {
+                            Err(RuntimeError::new(
+                                keyword,
+                                "'super' is used outside the class",
+                            ))
+                        }
+                    } else {
+                        Err(RuntimeError::new(
+                            method,
+                            format!("Unable to find property {} on super.", method.lexeme).as_str(),
+                        ))
+                    }
+                } else {
+                    Err(RuntimeError::new(keyword, "'super' is invalid"))
+                }
+            }
+            None => panic!("'super' can't be in global scope"),
         }
     }
 

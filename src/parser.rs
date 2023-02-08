@@ -534,7 +534,19 @@ impl<'a> Parser<'a> {
         };
         if let Some(e) = expr {
             self.advance(); // Important: comsume token & advance
-            return Ok(Box::new(e));
+            Ok(Box::new(e))
+        } else if self.matches(&[TokenType::SUPER]) {
+            let keyword = self.previous().clone();
+            self.consume(&TokenType::DOT, "Expect '.' after 'super' keyword")?;
+            self.consume(
+                &TokenType::IDENTIFIER,
+                "Expect super class method name after '.'",
+            )?;
+            Ok(Box::new(Expr::Super {
+                keyword,
+                depth: None,
+                method: self.previous().clone(),
+            }))
         } else if let LEFT_PARAN = self.peek().token_type {
             self.advance(); // Important: comsume token & advance
             let expr = self.expression()?;

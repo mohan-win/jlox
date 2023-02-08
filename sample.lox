@@ -1,16 +1,17 @@
 class Sweet {
-  init(amountOfSugar) {
-    this.amountOfSugar = amountOfSugar;
+  init(flavour) {
+    this.flavour = flavour;
   }
 }
 
+var str = "I'm not a class";
+
 class Cake < Sweet {
-    init(flavour, amountOfSugar) {
-      this.flavour = flavour;
-      return;
-    }
     taste(adjective) {
       print "The " + this.flavour + " tastes very " + adjective + ".";
     }
 }
+
+var cake = Cake("CheeseCake");
+cake.taste("Good");
 

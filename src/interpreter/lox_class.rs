@@ -31,7 +31,16 @@ impl LoxClassDefinition {
         }
     }
     pub fn find_method(&self, method_name: &str) -> Option<Rc<LoxFunction>> {
-        self.methods.get(method_name).map(|method| method.clone())
+        self.methods
+            .get(method_name)
+            .map(|method| method.clone())
+            .or_else(|| {
+                if let Some(super_class) = &self.super_class {
+                    super_class.0.find_method(method_name)
+                } else {
+                    None
+                }
+            })
     }
 }
 
@@ -52,6 +61,9 @@ impl LoxClass {
     ) -> LoxClass {
         LoxClass(Rc::new(LoxClassDefinition::new(name, super_class, methods)))
     }
+    pub fn find_method(&self, method_name: &str) -> Option<Rc<LoxFunction>> {
+        self.0.find_method(method_name)
+    }
 }
 
 impl fmt::Display for LoxClass {
@@ -65,7 +77,7 @@ impl LoxCallable for LoxClass {
         super::runtime_value::LoxCallableType::Class
     }
     fn arity(&self) -> usize {
-        if let Some(initializer) = self.0.find_method("init") {
+        if let Some(initializer) = self.find_method("init") {
             initializer.arity()
         } else {
             0
@@ -74,7 +86,7 @@ impl LoxCallable for LoxClass {
 
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<RuntimeValue>) -> RuntimeResult {
         let instance = ClassInstance::new(self);
-        if let Some(initializer) = self.0.find_method("init") {
+        if let Some(initializer) = self.find_method("init") {
             let initializer = initializer.bind(&instance);
             initializer.call(interpreter, arguments)
         } else {

@@ -20,6 +20,11 @@ pub enum Expr {
         keyword: Token,
         depth: Option<usize>,
     },
+    Super {
+        keyword: Token,
+        method: Token,
+        depth: Option<usize>,
+    },
     Unary {
         operator: Token,
         right: Box<Expr>,

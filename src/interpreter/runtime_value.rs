@@ -31,7 +31,7 @@ pub trait LoxCallable: AsAny + fmt::Display + Debug {
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<RuntimeValue>) -> RuntimeResult;
 }
 
-pub trait LoxInstance: fmt::Display + Debug {
+pub trait LoxInstance: AsAny + fmt::Display + Debug {
     fn get(&self, name: &Token) -> Option<RuntimeValue>;
     fn set(&self, name: &Token, value: RuntimeValue) -> RuntimeValue;
 }
