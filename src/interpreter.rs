@@ -69,6 +69,8 @@ impl Interpreter {
                     if let RuntimeValue::Callable(super_class) = self.evaluate(super_class)? {
                         if let Ok(lox_class) = super_class.as_any().downcast::<LoxClass>() {
                             super_lox_class = Some(lox_class)
+                        } else {
+                            return Err(RuntimeError::new(name, "Super class must be a class"));
                         }
                     } else {
                         return Err(RuntimeError::new(name, "Super class must be a class"));
