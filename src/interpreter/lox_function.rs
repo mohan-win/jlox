@@ -44,6 +44,9 @@ impl fmt::Display for LoxFunction {
 }
 
 impl LoxCallable for LoxFunction {
+    fn callable_type(&self) -> super::runtime_value::LoxCallableType {
+        super::runtime_value::LoxCallableType::Function
+    }
     fn arity(&self) -> usize {
         self.declaration.params.len()
     }

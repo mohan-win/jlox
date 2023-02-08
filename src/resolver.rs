@@ -32,10 +32,31 @@ impl Resolver {
 
     fn resolve_stmt(&mut self, stmt: &mut Stmt) {
         match stmt {
-            Stmt::Class { name, methods } => {
+            Stmt::Class {
+                name,
+                super_class,
+                methods,
+            } => {
                 let enclosing_class = self.current_class.take();
                 self.current_class = Some(ClassType::Class);
 
+                if let Some(super_class) = super_class {
+                    if let Expr::Variable {
+                        name: super_class_name,
+                        ..
+                    } = super_class
+                    {
+                        if super_class_name.lexeme.eq(&name.lexeme) {
+                            self.error(&ResolverError::new(
+                                super_class_name,
+                                "A class can't interit from itself",
+                            ))
+                        }
+                    }
+
+                    self.resolve_expr(super_class);
+                }
+                
                 self.declare(name);
                 self.define(name);
 

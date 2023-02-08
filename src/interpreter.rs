@@ -59,7 +59,22 @@ impl Interpreter {
     /// Execute statement
     fn execute(&mut self, statement: &Stmt) -> RuntimeResult<()> {
         match statement {
-            Stmt::Class { name, methods } => {
+            Stmt::Class {
+                name,
+                super_class,
+                methods,
+            } => {
+                let mut super_lox_class = None;
+                if let Some(super_class) = super_class {
+                    if let RuntimeValue::Callable(super_class) = self.evaluate(super_class)? {
+                        if let Ok(lox_class) = super_class.as_any().downcast::<LoxClass>() {
+                            super_lox_class = Some(lox_class)
+                        }
+                    } else {
+                        return Err(RuntimeError::new(name, "Super class must be a class"));
+                    }
+                }
+
                 self.environment
                     .borrow_mut()
                     .define(&name.lexeme, RuntimeValue::Nil);
@@ -76,7 +91,7 @@ impl Interpreter {
                     );
                 });
 
-                let kclass = Rc::new(LoxClass::new(&name.lexeme, methods_map));
+                let kclass = Rc::new(LoxClass::new(&name.lexeme, super_lox_class, methods_map));
 
                 self.environment
                     .borrow_mut()

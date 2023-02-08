@@ -69,6 +69,7 @@ pub struct Fun {
 pub enum Stmt {
     Class {
         name: Token,
+        super_class: Option<Expr>,
         methods: Vec<Fun>,
     },
     Function(Fun),

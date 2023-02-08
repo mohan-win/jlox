@@ -14,13 +14,19 @@ use super::{
 #[derive(Debug)]
 struct LoxClassDefinition {
     name: String,
+    super_class: Option<Rc<LoxClass>>,
     methods: HashMap<String, Rc<LoxFunction>>,
 }
 
 impl LoxClassDefinition {
-    fn new(name: &str, methods: HashMap<String, Rc<LoxFunction>>) -> LoxClassDefinition {
+    fn new(
+        name: &str,
+        super_class: Option<Rc<LoxClass>>,
+        methods: HashMap<String, Rc<LoxFunction>>,
+    ) -> LoxClassDefinition {
         LoxClassDefinition {
             name: String::from(name),
+            super_class,
             methods,
         }
     }
@@ -39,8 +45,12 @@ impl fmt::Display for LoxClassDefinition {
 pub struct LoxClass(Rc<LoxClassDefinition>);
 
 impl LoxClass {
-    pub fn new(name: &str, methods: HashMap<String, Rc<LoxFunction>>) -> LoxClass {
-        LoxClass(Rc::new(LoxClassDefinition::new(name, methods)))
+    pub fn new(
+        name: &str,
+        super_class: Option<Rc<LoxClass>>,
+        methods: HashMap<String, Rc<LoxFunction>>,
+    ) -> LoxClass {
+        LoxClass(Rc::new(LoxClassDefinition::new(name, super_class, methods)))
     }
 }
 
@@ -51,6 +61,9 @@ impl fmt::Display for LoxClass {
 }
 
 impl LoxCallable for LoxClass {
+    fn callable_type(&self) -> super::runtime_value::LoxCallableType {
+        super::runtime_value::LoxCallableType::Class
+    }
     fn arity(&self) -> usize {
         if let Some(initializer) = self.0.find_method("init") {
             initializer.arity()

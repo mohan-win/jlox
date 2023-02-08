@@ -2,12 +2,31 @@ use super::interpreter_error::{RuntimeError, RuntimeResult};
 use super::Interpreter;
 use crate::ast::LitralValue;
 use crate::token::Token;
+use std::any::Any;
 use std::cmp::{Ordering, PartialOrd};
 use std::fmt::{self, Debug};
 use std::ops::{Add, Div, Mul, Neg, Not, Sub};
 use std::rc::Rc;
 
-pub trait LoxCallable: fmt::Display + Debug {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LoxCallableType {
+    NativeFunction,
+    Function,
+    Class,
+}
+
+pub trait AsAny: 'static {
+    fn as_any(self: Rc<Self>) -> Rc<dyn Any>;
+}
+
+impl<T: 'static> AsAny for T {
+    fn as_any(self: Rc<Self>) -> Rc<dyn Any> {
+        self
+    }
+}
+
+pub trait LoxCallable: AsAny + fmt::Display + Debug {
+    fn callable_type(&self) -> LoxCallableType;
     fn arity(&self) -> usize;
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<RuntimeValue>) -> RuntimeResult;
 }

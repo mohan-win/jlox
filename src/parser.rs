@@ -116,6 +116,14 @@ impl<'a> Parser<'a> {
         let name = self
             .consume(&TokenType::IDENTIFIER, "Expect class name")?
             .clone();
+        let mut super_class = None;
+        if self.matches(&[TokenType::LESS]) {
+            self.consume(&TokenType::IDENTIFIER, "Expect super class name after '<'")?;
+            super_class = Some(Expr::Variable {
+                name: self.previous().clone(),
+                depth: None,
+            })
+        }
 
         self.consume(&TokenType::LEFT_BRACE, "Expect '{' after the class name")?;
         let mut methods = Vec::new();
@@ -126,7 +134,11 @@ impl<'a> Parser<'a> {
         }
         self.consume(&TokenType::RIGHT_BRACE, "End class definition with '}'")?;
 
-        Ok(Stmt::Class { name, methods })
+        Ok(Stmt::Class {
+            name,
+            super_class,
+            methods,
+        })
     }
 
     fn function(&mut self, kind: &str) -> ParserResult<Stmt> {

@@ -11,6 +11,9 @@ use super::{
 pub struct NativeFnClock;
 
 impl LoxCallable for NativeFnClock {
+    fn callable_type(&self) -> super::runtime_value::LoxCallableType {
+        super::runtime_value::LoxCallableType::NativeFunction
+    }
     fn arity(&self) -> usize {
         0
     }
