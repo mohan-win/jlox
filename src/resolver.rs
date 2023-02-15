@@ -7,6 +7,7 @@ use std::fmt;
 
 pub struct Resolver {
     scopes: Vec<HashMap<String, bool>>,
+    class_scopes: Vec<(String, HashMap<String, bool>)>, // Vec<(class_name, HashMap<method_name, is_defined>)>
     current_function: Option<FunctionType>,
     current_class: Option<ClassType>,
     num_of_resolver_errs: usize,
@@ -16,6 +17,7 @@ impl Resolver {
     pub fn new() -> Resolver {
         Resolver {
             scopes: Vec::new(),
+            class_scopes: Vec::new(),
             current_function: None,
             current_class: None,
             num_of_resolver_errs: 0,
@@ -42,6 +44,7 @@ impl Resolver {
 
                 self.declare(name);
                 self.define(name);
+                self.begin_class_scope(name);
 
                 super_class.as_ref().map(|super_class| {
                     if let Expr::Variable {
@@ -80,6 +83,7 @@ impl Resolver {
                     if method.name.lexeme == "init" {
                         declaration = FunctionType::Initializer;
                     }
+                    self.define_method(&method.name);
                     self.resolve_function(method, declaration);
                 });
 
@@ -89,6 +93,7 @@ impl Resolver {
                     self.end_scope(); // end of 'super' scope
                 }
 
+                self.end_class_scope();
                 self.current_class = enclosing_class;
             }
             Stmt::Var { name, expression } => {
@@ -306,6 +311,37 @@ impl Resolver {
             .last_mut()
             .unwrap()
             .insert(name.lexeme.clone(), true);
+    }
+
+    fn begin_class_scope(&mut self, name: &Token) {
+        self.class_scopes
+            .push((name.lexeme.clone(), HashMap::<String, bool>::new()))
+    }
+
+    fn end_class_scope(&mut self) {
+        self.class_scopes.pop();
+    }
+
+    fn define_method(&mut self, name: &Token) {
+        assert!(
+            !self.class_scopes.is_empty(),
+            "Can't define a method outside class"
+        );
+
+        let (class_name, class_scope) = self.class_scopes.last_mut().unwrap();
+        let class_name = class_name.clone();
+        if !class_scope.contains_key(&name.lexeme) {
+            class_scope.insert(name.lexeme.clone(), true);
+        } else {
+            self.error(&ResolverError::new(
+                name,
+                format!(
+                    "Method with name {} already exists in Class {}",
+                    name.lexeme, class_name,
+                )
+                .as_str(),
+            ));
+        }
     }
 
     fn error(&mut self, err: &ResolverError) {

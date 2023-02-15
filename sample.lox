@@ -1,4 +1,12 @@
 class A {
+  init(arg) {
+    print "This is one init with arg" + arg;
+  }
+  init() {
+    var a = 10;
+    var a = "10";
+    print "This is another init";
+  }
   method() {
     print "A method";
   }
@@ -19,3 +27,14 @@ class C < B {
 
 var c = C();
 c.test();
+
+var a = A("10");
+
+/*extension C {
+  init(arg) {
+    
+  }
+  new_method() {
+
+  }
+}*/
