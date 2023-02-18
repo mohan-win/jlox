@@ -95,6 +95,8 @@ impl<'a> Parser<'a> {
     fn declaration(&mut self) -> Option<Stmt> {
         let stmt = if self.matches(&[TokenType::CLASS]) {
             self.class_declaration()
+        } else if self.matches(&[TokenType::EXTENSION]) {
+            self.extension_declaration()
         } else if self.matches(&[TokenType::FUN]) {
             self.function("function")
         } else if self.matches(&[TokenType::VAR]) {
@@ -139,6 +141,34 @@ impl<'a> Parser<'a> {
             super_class,
             methods,
         })
+    }
+
+    fn extension_declaration(&mut self) -> ParserResult<Stmt> {
+        let class_name = self.consume(
+            &TokenType::IDENTIFIER,
+            "Expect name of the class the extension is for",
+        )?;
+        let class = Expr::Variable {
+            name: class_name.clone(),
+            depth: None,
+        };
+
+        self.consume(
+            &TokenType::LEFT_BRACE,
+            "Expect '{' after the name of the extension",
+        )?;
+        let mut methods = Vec::new();
+        while !self.check(&TokenType::RIGHT_BRACE) && !self.is_at_end() {
+            if let Stmt::Function(fun) = self.function("method")? {
+                methods.push(fun)
+            }
+        }
+        self.consume(&TokenType::RIGHT_BRACE, "End extension definition with '}'")?;
+        Ok(Stmt::Extension {
+            class,
+            super_class: None,
+            methods,
+        }) // Note: resolve super_class (if any) of the class being extendended in the resolver...
     }
 
     fn function(&mut self, kind: &str) -> ParserResult<Stmt> {

@@ -270,6 +270,7 @@ fn KEYWORDS() -> HashMap<&'static str, TokenType> {
         ("and", TokenType::AND),
         ("class", TokenType::CLASS),
         ("else", TokenType::ELSE),
+        ("extension", TokenType::EXTENSION),
         ("false", TokenType::FALSE),
         ("for", TokenType::FOR),
         ("fun", TokenType::FUN),

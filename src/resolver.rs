@@ -5,9 +5,45 @@ use std::collections::HashMap;
 use std::error;
 use std::fmt;
 
+struct ClassData {
+    class_name: String,
+    super_class: Option<Token>,
+    methods: HashMap<String, bool>,
+}
+
+impl ClassData {
+    fn new(
+        class_name: &str,
+        super_class: Option<&Token>,
+        methods: HashMap<String, bool>,
+    ) -> ClassData {
+        ClassData {
+            class_name: String::from(class_name),
+            super_class: super_class.map(|super_class| super_class.clone()),
+            methods,
+        }
+    }
+
+    fn define_method(&mut self, name: &Token) -> Result<(), ResolverError> {
+        if self.methods.contains_key(&name.lexeme) {
+            Err(ResolverError::new(
+                name,
+                format!(
+                    "Duplication definition of method {} is not allowed.",
+                    name.lexeme
+                )
+                .as_str(),
+            ))
+        } else {
+            self.methods.insert(name.lexeme.clone(), true);
+            Ok(())
+        }
+    }
+}
+
 pub struct Resolver {
     scopes: Vec<HashMap<String, bool>>,
-    class_scopes: Vec<(String, HashMap<String, bool>)>, // Vec<(class_name, HashMap<method_name, is_defined>)>
+    class_scopes: Vec<ClassData>,
     current_function: Option<FunctionType>,
     current_class: Option<ClassType>,
     num_of_resolver_errs: usize,
@@ -39,12 +75,9 @@ impl Resolver {
                 super_class,
                 methods,
             } => {
-                let enclosing_class = self.current_class.take();
-                self.current_class = Some(ClassType::Class);
-
                 self.declare(name);
                 self.define(name);
-                self.begin_class_scope(name);
+                self.begin_class_scope(name, super_class);
 
                 super_class.as_ref().map(|super_class| {
                     if let Expr::Variable {
@@ -61,40 +94,44 @@ impl Resolver {
                     }
                 });
 
-                if let Some(super_class) = super_class {
-                    self.current_class = Some(ClassType::SubClass);
-                    self.resolve_expr(super_class);
-
-                    self.begin_scope(); // 'super' scope
-                    self.scopes
-                        .last_mut()
-                        .unwrap()
-                        .insert(String::from("super"), true);
-                }
-
-                self.begin_scope(); // 'this' scope
-                self.scopes
-                    .last_mut()
-                    .unwrap()
-                    .insert(String::from("this"), true);
-
-                methods.iter_mut().for_each(|method| {
-                    let mut declaration = FunctionType::Method;
-                    if method.name.lexeme == "init" {
-                        declaration = FunctionType::Initializer;
-                    }
-                    self.define_method(&method.name);
-                    self.resolve_function(method, declaration);
-                });
-
-                self.end_scope(); // end of 'this' scope
-
-                if let Some(_super_class) = super_class {
-                    self.end_scope(); // end of 'super' scope
-                }
+                self.resolve_methods(super_class, methods);
 
                 self.end_class_scope();
-                self.current_class = enclosing_class;
+            }
+            Stmt::Extension {
+                class,
+                super_class,
+                methods,
+            } => {
+                self.resolve_expr(class);
+                if let Expr::Variable { name, depth: _ } = class {
+                    // Make sure the extending class is in scope and resolve its super class if any!!
+                    if let Some(class_data) = self.find_class_data(&name.lexeme) {
+                        *super_class =
+                            class_data
+                                .super_class
+                                .as_ref()
+                                .map(|super_class| Expr::Variable {
+                                    name: super_class.clone(),
+                                    depth: None,
+                                });
+
+                        self.resolve_methods(super_class, methods)
+                    } else {
+                        self.error(&ResolverError::new(
+                            name,
+                            format!(
+                                "Unable to find class named {} to extend in the scope",
+                                name.lexeme
+                            )
+                            .as_str(),
+                        ))
+                    }
+                } else {
+                    panic!("extension's class should be a variable in AST");
+                }
+
+                // ToDo:: is 'super' usage inside extension methods ?
             }
             Stmt::Var { name, expression } => {
                 self.declare(name);
@@ -258,6 +295,44 @@ impl Resolver {
         self.current_function = enclosing_function;
     }
 
+    fn resolve_methods(&mut self, super_class: &mut Option<Expr>, methods: &mut Vec<Fun>) {
+        let enclosing_class = self.current_class.take();
+        self.current_class = Some(ClassType::Class);
+        if let Some(super_class) = super_class {
+            self.current_class = Some(ClassType::SubClass);
+            self.resolve_expr(super_class);
+
+            self.begin_scope(); // 'super' scope
+            self.scopes
+                .last_mut()
+                .unwrap()
+                .insert(String::from("super"), true);
+        }
+
+        self.begin_scope(); // 'this' scope
+        self.scopes
+            .last_mut()
+            .unwrap()
+            .insert(String::from("this"), true);
+
+        methods.iter_mut().for_each(|method| {
+            let mut declaration = FunctionType::Method;
+            if method.name.lexeme == "init" {
+                declaration = FunctionType::Initializer;
+            }
+            self.define_method(&method.name);
+            self.resolve_function(method, declaration);
+        });
+
+        self.end_scope(); // end of 'this' scope
+
+        if let Some(_super_class) = super_class {
+            self.end_scope(); // end of 'super' scope
+        }
+
+        self.current_class = enclosing_class;
+    }
+
     fn resolve_local_depth(&self, name: &Token) -> Option<usize> {
         let result = self
             .scopes
@@ -313,9 +388,16 @@ impl Resolver {
             .insert(name.lexeme.clone(), true);
     }
 
-    fn begin_class_scope(&mut self, name: &Token) {
-        self.class_scopes
-            .push((name.lexeme.clone(), HashMap::<String, bool>::new()))
+    fn begin_class_scope(&mut self, name: &Token, super_class: &Option<Expr>) {
+        let super_class = super_class.as_ref().map(|super_class| {
+            if let Expr::Variable { name, depth: _ } = super_class {
+                name
+            } else {
+                panic!("Super class name should be stored in variable expression");
+            }
+        });
+        let class_data = ClassData::new(&name.lexeme, super_class, HashMap::new());
+        self.class_scopes.push(class_data)
     }
 
     fn end_class_scope(&mut self) {
@@ -328,20 +410,22 @@ impl Resolver {
             "Can't define a method outside class"
         );
 
-        let (class_name, class_scope) = self.class_scopes.last_mut().unwrap();
-        let class_name = class_name.clone();
-        if !class_scope.contains_key(&name.lexeme) {
-            class_scope.insert(name.lexeme.clone(), true);
-        } else {
-            self.error(&ResolverError::new(
-                name,
-                format!(
-                    "Method with name {} already exists in Class {}",
-                    name.lexeme, class_name,
-                )
-                .as_str(),
-            ));
+        let class_data = self.class_scopes.last_mut().unwrap();
+        if let Err(err) = class_data.define_method(name) {
+            self.error(&err)
         }
+    }
+
+    fn find_class_data(&mut self, class_name: &str) -> Option<&ClassData> {
+        let result = self.class_scopes.iter().rev().try_for_each(|class_data| {
+            if class_data.class_name.eq(class_name) {
+                Err(class_data)
+            } else {
+                Ok(())
+            }
+        });
+
+        result.map_or_else(|class_data| Some(class_data), |_| None)
     }
 
     fn error(&mut self, err: &ResolverError) {

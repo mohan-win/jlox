@@ -77,6 +77,11 @@ pub enum Stmt {
         super_class: Option<Expr>,
         methods: Vec<Fun>,
     },
+    Extension {
+        class: Expr,
+        super_class: Option<Expr>,
+        methods: Vec<Fun>,
+    },
     Function(Fun),
     Var {
         name: Token,

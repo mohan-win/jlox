@@ -1,40 +1,48 @@
 class A {
   init(arg) {
-    print "This is one init with arg" + arg;
-  }
-  init() {
-    var a = 10;
-    var a = "10";
-    print "This is another init";
+    print "This is A init " + arg;
   }
   method() {
     print "A method";
   }
 }
 
-class B < A {
-  method() {
-    print "B method";
+for(var i = 0; i < 10; i = i + 1) {
+  class B < A {
+    init() {
+      super.init("10");
+      var a = 10;
+      print "This is B init";
+    }
+    method() {
+      print "B method";
+    }
+    test(){
+      super.method();
+    }
   }
-  test(){
-    super.method();
+
+  class C < B {
+
   }
+
+  var c = C();
+  c.test();
 }
 
-class C < B {
+class C < A {
 
 }
 
-var c = C();
-c.test();
+var c = C("10").init("20");
+c.method();
 
-var a = A("10");
 
-/*extension C {
+extension C {
   init(arg) {
     
   }
-  new_method() {
+  newMethod() {
 
   }
-}*/
+}
