@@ -129,11 +129,11 @@ impl Interpreter {
                     .expect("Only classes can be extended");
                 let mut super_lox_class = None;
                 if let Some(super_class) = super_class {
-                    self.evaluate(super_class)?
-                        .try_into_class()
-                        .map(|super_class| {
-                            super_lox_class = Some(super_class);
-                        });
+                    super_lox_class = Some(
+                        self.evaluate(super_class)?
+                            .try_into_class()
+                            .expect("Only classes can be super class"),
+                    );
                 }
                 let super_class = super_lox_class;
 
