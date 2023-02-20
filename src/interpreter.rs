@@ -118,6 +118,55 @@ impl Interpreter {
                     .borrow_mut()
                     .assign(name, RuntimeValue::Callable(kclass))?;
             }
+            Stmt::Extension {
+                class,
+                super_class,
+                methods,
+            } => {
+                let class = self
+                    .evaluate(class)?
+                    .try_into_class()
+                    .expect("Only classes can be extended");
+                let mut super_lox_class = None;
+                if let Some(super_class) = super_class {
+                    self.evaluate(super_class)?
+                        .try_into_class()
+                        .map(|super_class| {
+                            super_lox_class = Some(super_class);
+                        });
+                }
+                let super_class = super_lox_class;
+
+                // 'super' environment
+                super_class.as_ref().map(|super_class| {
+                    let mut environment = Environment::new_with(Rc::clone(&self.environment));
+                    environment.define(
+                        "super",
+                        RuntimeValue::Callable(Rc::clone(super_class) as Rc<dyn LoxCallable>),
+                    );
+                    self.environment = Rc::new(RefCell::new(environment));
+                });
+
+                let mut methods_map: HashMap<String, Rc<LoxFunction>> = HashMap::new();
+                methods.iter().for_each(|method| {
+                    methods_map.insert(
+                        method.name.lexeme.clone(),
+                        Rc::new(LoxFunction::new(
+                            method,
+                            &self.environment,
+                            method.name.lexeme.eq("init"),
+                        )),
+                    );
+                });
+
+                // Pop/discard 'super' environment
+                super_class.as_ref().map(|_| {
+                    let enclosing_environment =
+                        self.environment.as_ref().borrow_mut().take_enclosing();
+                    enclosing_environment.map(|env| self.environment = env);
+                });
+                class.add_extension_methods(methods_map)
+            }
             Stmt::Var { name, expression } => {
                 let mut value = RuntimeValue::Nil;
                 if let Some(expression) = expression {

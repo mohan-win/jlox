@@ -36,7 +36,7 @@ impl LoxClassDefinition {
             .map(|method| method.clone())
             .or_else(|| {
                 if let Some(super_class) = &self.super_class {
-                    super_class.0.find_method(method_name)
+                    super_class.find_method(method_name)
                 } else {
                     None
                 }
@@ -51,7 +51,7 @@ impl fmt::Display for LoxClassDefinition {
 }
 
 #[derive(Debug, Clone)]
-pub struct LoxClass(Rc<LoxClassDefinition>);
+pub struct LoxClass(Rc<RefCell<LoxClassDefinition>>); // Why LoxClassDefinition should be mutable ? Its because the class definition can be extended using `extension methods`
 
 impl LoxClass {
     pub fn new(
@@ -59,16 +59,27 @@ impl LoxClass {
         super_class: Option<Rc<LoxClass>>,
         methods: HashMap<String, Rc<LoxFunction>>,
     ) -> LoxClass {
-        LoxClass(Rc::new(LoxClassDefinition::new(name, super_class, methods)))
+        LoxClass(Rc::new(RefCell::new(LoxClassDefinition::new(
+            name,
+            super_class,
+            methods,
+        ))))
     }
     pub fn find_method(&self, method_name: &str) -> Option<Rc<LoxFunction>> {
-        self.0.find_method(method_name)
+        self.0.as_ref().borrow().find_method(method_name)
+    }
+    pub fn add_extension_methods(&self, methods: HashMap<String, Rc<LoxFunction>>) {
+        self.0
+            .as_ref()
+            .borrow_mut()
+            .methods
+            .extend(methods.into_iter());
     }
 }
 
 impl fmt::Display for LoxClass {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "<class {}>", self.0)
+        write!(f, "<class {}>", self.0.as_ref().borrow())
     }
 }
 
@@ -97,7 +108,7 @@ impl LoxCallable for LoxClass {
 
 #[derive(Debug)]
 struct ClassInstanceData {
-    kclass: Rc<LoxClassDefinition>,
+    kclass: Rc<RefCell<LoxClassDefinition>>,
     fields: HashMap<String, RuntimeValue>,
 }
 
@@ -112,7 +123,13 @@ impl ClassInstance {
         })))
     }
     fn lookup_method(&self, name: &Token) -> Option<Rc<LoxFunction>> {
-        self.0.as_ref().borrow().kclass.find_method(&name.lexeme)
+        self.0
+            .as_ref()
+            .borrow()
+            .kclass
+            .as_ref()
+            .borrow()
+            .find_method(&name.lexeme)
     }
 }
 
@@ -144,6 +161,10 @@ impl LoxInstance for ClassInstance {
 
 impl fmt::Display for ClassInstance {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "<instance of {}>", self.0.as_ref().borrow().kclass)
+        write!(
+            f,
+            "<instance of {}>",
+            self.0.as_ref().borrow().kclass.as_ref().borrow()
+        )
     }
 }

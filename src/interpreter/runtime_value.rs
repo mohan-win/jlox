@@ -1,4 +1,5 @@
 use super::interpreter_error::{RuntimeError, RuntimeResult};
+use super::lox_class::LoxClass;
 use super::Interpreter;
 use crate::ast::LitralValue;
 use crate::token::Token;
@@ -44,6 +45,23 @@ pub enum RuntimeValue {
     Nil,
     Callable(Rc<dyn LoxCallable>),
     Instance(Rc<dyn LoxInstance>),
+}
+
+impl RuntimeValue {
+    pub fn is_truthy(&self) -> Self {
+        match self {
+            Self::Nil | Self::Boolean(false) => Self::Boolean(false),
+            _ => Self::Boolean(true),
+        }
+    }
+
+    pub fn try_into_class(self) -> Option<Rc<LoxClass>> {
+        if let RuntimeValue::Callable(callable) = self {
+            callable.as_any().downcast::<LoxClass>().ok()
+        } else {
+            None
+        }
+    }
 }
 
 impl Neg for RuntimeValue {
@@ -191,15 +209,6 @@ impl PartialOrd for RuntimeValue {
             (Self::Boolean(lhs), Self::Boolean(rhs)) => lhs >= rhs,
             (Self::Nil, Self::Nil) => true,
             _ => false,
-        }
-    }
-}
-
-impl RuntimeValue {
-    pub fn is_truthy(&self) -> Self {
-        match self {
-            Self::Nil | Self::Boolean(false) => Self::Boolean(false),
-            _ => Self::Boolean(true),
         }
     }
 }
