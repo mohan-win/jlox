@@ -1,20 +1,59 @@
 class A {
-    init(arg) {
-      print "This is A init " + arg;
+  init(arg) {
+    print "This is A init " + arg;
+  }
+  method() {
+    print "A method";
+  }
+}
+
+for(var i = 0; i < 10; i = i + 1) {
+  class B < A {
+    init() {
+      super.init("10");
+      var a = 10;
+      print "This is B init";
     }
     method() {
-      print "A method";
+      print "B method";
+    }
+    test(){
+      super.method();
     }
   }
 
-  extension A {
-    init(){
-      print "This should result in resolver error";
-    }
+  class C < B {
+
   }
 
-  extension A {
-    method() {
-      print "Another extension";
-    }
+  var c = C();
+  c.test();
+}
+
+class C < A {
+
+}
+
+class D < C {
+
+}
+
+extension C {
+  init(arg) {
+    super.init(arg);
+    print "This is c init " + arg;
   }
+  newMethod() {
+    print "This is extention method for c";
+  }
+}
+
+var d = D("hi");
+d.newMethod();
+
+
+
+
+
+
+
