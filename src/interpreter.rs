@@ -16,7 +16,7 @@ use self::{
     interpreter_error::{
         EarlyReturn, EarlyReturnReason, InterpreterError, RuntimeError, RuntimeResult,
     },
-    lox_class::{ClassInstance, LoxClass},
+    lox_class::LoxClass,
     lox_function::LoxFunction,
     native_functions::NativeFnClock,
     runtime_value::{LoxCallable, RuntimeValue},
