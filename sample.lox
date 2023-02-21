@@ -7,42 +7,8 @@ class A {
   }
 }
 
-for(var i = 0; i < 10; i = i + 1) {
-  class B < A {
-    init() {
-      super.init("10");
-      var a = 10;
-      print "This is B init";
-    }
-    method() {
-      print "B method";
-    }
-    test(){
-      super.method();
-    }
-  }
-
-  class C < B {
-
-  }
-
-  var c = C();
-  c.test();
-}
-
-class C < A {
-
-}
-
-var c = C("10").init("20");
-c.method();
-
-
-extension C {
-  init(arg) {
-    
-  }
-  newMethod() {
-
+extension A {
+  init(){
+    print "This should result in resolver error";
   }
 }

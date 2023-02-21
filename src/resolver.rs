@@ -43,7 +43,7 @@ impl ClassData {
 
 pub struct Resolver {
     scopes: Vec<HashMap<String, bool>>,
-    class_scopes: Vec<ClassData>,
+    classes_in_scopes: Vec<HashMap<String, ClassData>>, // Vec<HashMap<class_name, class_data>>
     current_function: Option<FunctionType>,
     current_class: Option<ClassType>,
     num_of_resolver_errs: usize,
@@ -53,7 +53,7 @@ impl Resolver {
     pub fn new() -> Resolver {
         Resolver {
             scopes: Vec::new(),
-            class_scopes: Vec::new(),
+            classes_in_scopes: Vec::new(),
             current_function: None,
             current_class: None,
             num_of_resolver_errs: 0,
@@ -77,7 +77,6 @@ impl Resolver {
             } => {
                 self.declare(name);
                 self.define(name);
-                self.begin_class_scope(name, super_class);
 
                 super_class.as_ref().map(|super_class| {
                     if let Expr::Variable {
@@ -95,8 +94,7 @@ impl Resolver {
                 });
 
                 self.resolve_methods(super_class, methods);
-
-                self.end_class_scope();
+                self.define_class(name, super_class, methods);
             }
             Stmt::Extension {
                 class,
@@ -130,8 +128,6 @@ impl Resolver {
                 } else {
                     panic!("extension's class should be a variable in AST");
                 }
-
-                // ToDo:: is 'super' usage inside extension methods ?
             }
             Stmt::Var { name, expression } => {
                 self.declare(name);
@@ -320,7 +316,6 @@ impl Resolver {
             if method.name.lexeme == "init" {
                 declaration = FunctionType::Initializer;
             }
-            self.define_method(&method.name);
             self.resolve_function(method, declaration);
         });
 
@@ -355,10 +350,12 @@ impl Resolver {
 
     fn begin_scope(&mut self) {
         self.scopes.push(HashMap::<String, bool>::new());
+        self.begin_class_scope();
     }
 
     fn end_scope(&mut self) {
         self.scopes.pop();
+        self.end_class_scope();
     }
 
     fn declare(&mut self, name: &Token) {
@@ -388,7 +385,11 @@ impl Resolver {
             .insert(name.lexeme.clone(), true);
     }
 
-    fn begin_class_scope(&mut self, name: &Token, super_class: &Option<Expr>) {
+    fn begin_class_scope(&mut self) {
+        self.classes_in_scopes.push(HashMap::new());
+    }
+
+    fn define_class(&mut self, name: &Token, super_class: &Option<Expr>, methods: &Vec<Fun>) {
         let super_class = super_class.as_ref().map(|super_class| {
             if let Expr::Variable { name, depth: _ } = super_class {
                 name
@@ -396,29 +397,21 @@ impl Resolver {
                 panic!("Super class name should be stored in variable expression");
             }
         });
-        let class_data = ClassData::new(&name.lexeme, super_class, HashMap::new());
-        self.class_scopes.push(class_data)
+        let mut class_data = ClassData::new(&name.lexeme, super_class, HashMap::new());
+        methods.iter().for_each(|method| {
+            if let Err(err) = class_data.define_method(&method.name) {
+                self.error(&err)
+            }
+        })
     }
 
     fn end_class_scope(&mut self) {
-        self.class_scopes.pop();
-    }
-
-    fn define_method(&mut self, name: &Token) {
-        assert!(
-            !self.class_scopes.is_empty(),
-            "Can't define a method outside class"
-        );
-
-        let class_data = self.class_scopes.last_mut().unwrap();
-        if let Err(err) = class_data.define_method(name) {
-            self.error(&err)
-        }
+        self.classes_in_scopes.pop();
     }
 
     fn find_class_data(&mut self, class_name: &str) -> Option<&ClassData> {
-        let result = self.class_scopes.iter().rev().try_for_each(|class_data| {
-            if class_data.class_name.eq(class_name) {
+        let result = self.classes_in_scopes.iter().rev().try_for_each(|classes| {
+            if let Some(class_data) = classes.get(class_name) {
                 Err(class_data)
             } else {
                 Ok(())
