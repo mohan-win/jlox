@@ -6,7 +6,7 @@ use std::error;
 use std::fmt;
 
 struct ClassData {
-    class_name: String,
+    _class_name: String,
     super_class: Option<Token>,
     methods: HashMap<String, bool>,
 }
@@ -18,7 +18,7 @@ impl ClassData {
         methods: HashMap<String, bool>,
     ) -> ClassData {
         ClassData {
-            class_name: String::from(class_name),
+            _class_name: String::from(class_name),
             super_class: super_class.map(|super_class| super_class.clone()),
             methods,
         }
@@ -53,7 +53,7 @@ impl Resolver {
     pub fn new() -> Resolver {
         Resolver {
             scopes: Vec::new(),
-            classes_in_scopes: Vec::new(),
+            classes_in_scopes: vec![HashMap::new()],
             current_function: None,
             current_class: None,
             num_of_resolver_errs: 0,
@@ -77,6 +77,7 @@ impl Resolver {
             } => {
                 self.declare(name);
                 self.define(name);
+                self.define_class(name, super_class, methods);
 
                 super_class.as_ref().map(|super_class| {
                     if let Expr::Variable {
@@ -94,7 +95,6 @@ impl Resolver {
                 });
 
                 self.resolve_methods(super_class, methods);
-                self.define_class(name, super_class, methods);
             }
             Stmt::Extension {
                 class,
@@ -113,8 +113,8 @@ impl Resolver {
                                     name: super_class.clone(),
                                     depth: None,
                                 });
-
-                        self.resolve_methods(super_class, methods)
+                        self.resolve_methods(super_class, methods);
+                        self.extend_class_data(&name.lexeme, methods);
                     } else {
                         self.error(&ResolverError::new(
                             name,
@@ -402,23 +402,44 @@ impl Resolver {
             if let Err(err) = class_data.define_method(&method.name) {
                 self.error(&err)
             }
-        })
+        });
+        self.classes_in_scopes
+            .last_mut()
+            .unwrap()
+            .insert(name.lexeme.clone(), class_data);
     }
 
     fn end_class_scope(&mut self) {
         self.classes_in_scopes.pop();
     }
 
-    fn find_class_data(&mut self, class_name: &str) -> Option<&ClassData> {
-        let result = self.classes_in_scopes.iter().rev().try_for_each(|classes| {
-            if let Some(class_data) = classes.get(class_name) {
-                Err(class_data)
-            } else {
-                Ok(())
-            }
-        });
+    fn find_class_data(&mut self, class_name: &str) -> Option<&mut ClassData> {
+        let result = self
+            .classes_in_scopes
+            .iter_mut()
+            .rev()
+            .try_for_each(|classes| {
+                if let Some(class_data) = classes.get_mut(class_name) {
+                    Err(class_data)
+                } else {
+                    Ok(())
+                }
+            });
 
         result.map_or_else(|class_data| Some(class_data), |_| None)
+    }
+
+    fn extend_class_data(&mut self, class_name: &str, methods: &Vec<Fun>) {
+        let class_data = self
+            .find_class_data(class_name)
+            .expect("Can't extend a class which doesn't exist");
+        let mut errs = Vec::new();
+        for method in methods {
+            if let Err(err) = class_data.define_method(&method.name) {
+                errs.push(err);
+            }
+        }
+        errs.iter().for_each(|err| self.error(err))
     }
 
     fn error(&mut self, err: &ResolverError) {

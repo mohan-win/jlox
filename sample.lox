@@ -1,14 +1,20 @@
 class A {
-  init(arg) {
-    print "This is A init " + arg;
+    init(arg) {
+      print "This is A init " + arg;
+    }
+    method() {
+      print "A method";
+    }
   }
-  method() {
-    print "A method";
-  }
-}
 
-extension A {
-  init(){
-    print "This should result in resolver error";
+  extension A {
+    init(){
+      print "This should result in resolver error";
+    }
   }
-}
+
+  extension A {
+    method() {
+      print "Another extension";
+    }
+  }
