@@ -31,16 +31,16 @@ impl LoxClassDefinition {
         }
     }
     pub fn find_method(&self, method_name: &str) -> Option<Rc<LoxFunction>> {
-        self.methods
-            .get(method_name)
-            .map(|method| method.clone())
-            .or_else(|| {
-                if let Some(super_class) = &self.super_class {
-                    super_class.0.find_method(method_name)
-                } else {
-                    None
-                }
-            })
+        let mut method = None;
+        if let Some(super_class) = self.super_class.as_ref() {
+            method = super_class.0.find_method(method_name);
+        } else if method.is_none() {
+            method = self
+                .methods
+                .get(method_name)
+                .map(|method| Rc::clone(method));
+        }
+        method
     }
 }
 
