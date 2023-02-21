@@ -20,9 +20,8 @@ pub enum Expr {
         keyword: Token,
         depth: Option<usize>,
     },
-    Super {
+    Inner {
         keyword: Token,
-        method: Token,
         depth: Option<usize>,
     },
     Unary {

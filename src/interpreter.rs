@@ -261,11 +261,7 @@ impl Interpreter {
                 Some(depth) => self.environment.borrow().get_at(&name.lexeme, *depth),
                 None => self.globals.borrow().get(name),
             },
-            Expr::Super {
-                keyword,
-                method,
-                depth,
-            } => self.evaluate_super(keyword, method, depth),
+            Expr::Inner { keyword, depth } => self.evaluate_inner(keyword, depth),
             Expr::This { keyword, depth } => match depth {
                 Some(depth) => self.environment.borrow().get_at(&keyword.lexeme, *depth),
                 None => {
@@ -321,7 +317,11 @@ impl Interpreter {
         }
     }
 
-    fn evaluate_super(
+    fn evaluate_inner(&mut self, keyword: &Token, depth: &Option<usize>) -> RuntimeResult {
+        Ok(RuntimeValue::Nil)
+    }
+
+    /*fn evaluate_super(
         &mut self,
         keyword: &Token,
         method: &Token,
@@ -367,7 +367,7 @@ impl Interpreter {
             }
             None => panic!("'super' can't be in global scope"),
         }
-    }
+    }*/
 
     /// Helper for evaluating function call
     fn evaluate_function_call(

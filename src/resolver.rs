@@ -61,12 +61,6 @@ impl Resolver {
                 if let Some(super_class) = super_class {
                     self.current_class = Some(ClassType::SubClass);
                     self.resolve_expr(super_class);
-
-                    self.begin_scope(); // 'super' scope
-                    self.scopes
-                        .last_mut()
-                        .unwrap()
-                        .insert(String::from("super"), true);
                 }
 
                 self.begin_scope(); // 'this' scope
@@ -164,21 +158,10 @@ impl Resolver {
                 }
                 *depth = self.resolve_local_depth(name)
             }
-            Expr::Super {
-                keyword,
-                method: _,
-                depth,
-            } => match self.current_class {
-                None => self.error(&ResolverError::new(
-                    &keyword,
-                    "Can't use 'super' outside a class",
-                )),
-                Some(ClassType::Class) => self.error(&ResolverError::new(
-                    &keyword,
-                    "Can't use 'super' keyword on a class without a super class",
-                )),
-                Some(ClassType::SubClass) => *depth = self.resolve_local_depth(&keyword),
-            },
+            Expr::Inner { keyword, depth } => {
+                // ToDo::
+                // Make sure inner() can't be used outside class
+            }
             Expr::This { keyword, depth } => {
                 if let Some(_) = self.current_class {
                     *depth = self.resolve_local_depth(keyword);
