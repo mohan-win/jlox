@@ -1,4 +1,8 @@
 class Doughnut {
+  init(type) {
+    this.type = type;
+    inner(10);
+  }
   cook() {
     print "Fry until golden brown";
     inner();
@@ -6,10 +10,23 @@ class Doughnut {
   }
 }
 
-class BostonCream < Doughnut {
-  cook() {
-    print "Pipe full of custard and coat with chocolate";
+class I < Doughnut {
+  init(i) {
+    print i;
   }
 }
 
-BostonCream().cook();
+class BostonCream < I {
+  cook() {
+    print "Pipe full of custard and coat with chocolate";
+    inner();
+  }
+}
+
+class J < BostonCream {
+  cook() {
+    print "Enjoy!!";
+  }
+}
+
+J("chocolate").cook();
