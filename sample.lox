@@ -1,7 +1,7 @@
 class Doughnut {
   cook() {
     print "Fry until golden brown";
-    inner(); this.inner(); this.(sub_class(Doughnut).cook)();
+    inner();
     print "Place in a nice box";
   }
 }
