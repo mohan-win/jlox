@@ -19,7 +19,7 @@ use self::{
     lox_class::LoxClass,
     lox_function::LoxFunction,
     native_functions::NativeFnClock,
-    runtime_value::{LoxCallable, RuntimeValue},
+    runtime_value::RuntimeValue,
 };
 
 pub struct Interpreter {
@@ -83,16 +83,6 @@ impl Interpreter {
                     .borrow_mut()
                     .define(&name.lexeme, RuntimeValue::Nil);
 
-                // 'super' environment
-                super_class.as_ref().map(|super_class| {
-                    let mut environment = Environment::new_with(Rc::clone(&self.environment));
-                    environment.define(
-                        "super",
-                        RuntimeValue::Callable(Rc::clone(super_class) as Rc<dyn LoxCallable>),
-                    );
-                    self.environment = Rc::new(RefCell::new(environment));
-                });
-
                 let mut methods_map: HashMap<String, Rc<LoxFunction>> = HashMap::new();
                 methods.iter().for_each(|method| {
                     methods_map.insert(
@@ -103,13 +93,6 @@ impl Interpreter {
                             method.name.lexeme.eq("init"),
                         )),
                     );
-                });
-
-                // Pop/discard 'super' environment
-                super_class.as_ref().map(|_| {
-                    let enclosing_environment =
-                        self.environment.as_ref().borrow_mut().take_enclosing();
-                    enclosing_environment.map(|env| self.environment = env);
                 });
 
                 let kclass = Rc::new(LoxClass::new(&name.lexeme, super_class, methods_map));
@@ -261,7 +244,16 @@ impl Interpreter {
                 Some(depth) => self.environment.borrow().get_at(&name.lexeme, *depth),
                 None => self.globals.borrow().get(name),
             },
-            Expr::Inner { keyword, depth } => self.evaluate_inner(keyword, depth),
+            Expr::Inner {
+                keyword: _,
+                this_depth,
+                class,
+                method,
+            } => self.evaluate_inner(
+                this_depth.expect("inner can't be used outside the class"),
+                class,
+                method,
+            ),
             Expr::This { keyword, depth } => match depth {
                 Some(depth) => self.environment.borrow().get_at(&keyword.lexeme, *depth),
                 None => {
@@ -317,57 +309,25 @@ impl Interpreter {
         }
     }
 
-    fn evaluate_inner(&mut self, keyword: &Token, depth: &Option<usize>) -> RuntimeResult {
-        Ok(RuntimeValue::Nil)
-    }
-
-    /*fn evaluate_super(
+    fn evaluate_inner(
         &mut self,
-        keyword: &Token,
+        this_depth: usize,
+        class: &Token,
         method: &Token,
-        depth: &Option<usize>,
     ) -> RuntimeResult {
-        match depth {
-            Some(depth) => {
-                if let RuntimeValue::Callable(super_class) =
-                    self.environment.borrow().get_at(&keyword.lexeme, *depth)?
-                {
-                    let super_lox_class = super_class
-                        .as_any()
-                        .downcast::<LoxClass>()
-                        .expect("'super' doesn't refer to a class");
-                    if let Some(method) = super_lox_class.find_method(&method.lexeme) {
-                        let this = self
-                            .environment
-                            .as_ref()
-                            .borrow()
-                            .get_at("this", depth - 1)?; // Note: depth - 1
-                        if let RuntimeValue::Instance(this_instance_obj) = this {
-                            let this_instance = this_instance_obj
-                                .as_any()
-                                .downcast::<ClassInstance>()
-                                .expect("'this' should refer to a class instance");
-                            let method = method.bind(&this_instance);
-                            Ok(RuntimeValue::Callable(Rc::new(method)))
-                        } else {
-                            Err(RuntimeError::new(
-                                keyword,
-                                "'super' is used outside the class",
-                            ))
-                        }
-                    } else {
-                        Err(RuntimeError::new(
-                            method,
-                            format!("Unable to find property {}", method.lexeme).as_str(),
-                        ))
-                    }
-                } else {
-                    Err(RuntimeError::new(keyword, "'super' is invalid"))
-                }
-            }
-            None => panic!("'super' can't be in global scope"),
+        if let Ok(RuntimeValue::Instance(instance)) =
+            self.environment.borrow().get_at("this", this_depth)
+        {
+            instance
+                .get_inner(class, method)
+                .map_or_else(|| Ok(RuntimeValue::Nil), |inner_method| Ok(inner_method))
+        } else {
+            Err(RuntimeError::new(
+                class,
+                format!("Unable to find instance to call inner()").as_str(),
+            ))
         }
-    }*/
+    }
 
     /// Helper for evaluating function call
     fn evaluate_function_call(
@@ -376,7 +336,8 @@ impl Interpreter {
         paran: &Token,
         arguments: &Vec<Expr>,
     ) -> RuntimeResult {
-        if let RuntimeValue::Callable(function) = self.evaluate(callee)? {
+        let callee_value = self.evaluate(&callee)?;
+        if let RuntimeValue::Callable(function) = callee_value {
             let mut argument_vals = Vec::new();
             if function.arity() != arguments.len() {
                 Err(RuntimeError::new(
@@ -402,10 +363,23 @@ impl Interpreter {
                 function.call(self, argument_vals)
             }
         } else {
-            Err(RuntimeError::new(
-                paran,
-                "Only functions and classes are callable",
-            ))
+            // If callee is 'inner' and if it evaluates to 'Nil' then it means that there are no
+            // inner methods to call, so return Nil as the result
+            if let Expr::Inner { .. } = callee.as_ref() {
+                if let RuntimeValue::Nil = callee_value {
+                    Ok(RuntimeValue::Nil)
+                } else {
+                    Err(RuntimeError::new(
+                        paran,
+                        "Only functions and classes are callable",
+                    ))
+                }
+            } else {
+                Err(RuntimeError::new(
+                    paran,
+                    "Only functions and classes are callable",
+                ))
+            }
         }
     }
 }

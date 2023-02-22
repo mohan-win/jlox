@@ -33,6 +33,7 @@ pub trait LoxCallable: AsAny + fmt::Display + Debug {
 
 pub trait LoxInstance: AsAny + fmt::Display + Debug {
     fn get(&self, name: &Token) -> Option<RuntimeValue>;
+    fn get_inner(&self, class: &Token, method: &Token) -> Option<RuntimeValue>;
     fn set(&self, name: &Token, value: RuntimeValue) -> RuntimeValue;
 }
 

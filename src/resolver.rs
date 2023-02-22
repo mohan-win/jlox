@@ -156,15 +156,16 @@ impl Resolver {
                         ))
                     }
                 }
-                *depth = self.resolve_local_depth(name)
+                *depth = self.resolve_local_depth(&name.lexeme)
             }
-            Expr::Inner { keyword, depth } => {
-                // ToDo::
-                // Make sure inner() can't be used outside class
-            }
+            Expr::Inner {
+                keyword: _,
+                this_depth,
+                ..
+            } => *this_depth = self.resolve_local_depth("this"),
             Expr::This { keyword, depth } => {
                 if let Some(_) = self.current_class {
-                    *depth = self.resolve_local_depth(keyword);
+                    *depth = self.resolve_local_depth(&keyword.lexeme);
                 } else {
                     self.error(&ResolverError::new(
                         keyword,
@@ -174,7 +175,7 @@ impl Resolver {
             }
             Expr::Assign { name, value, depth } => {
                 self.resolve_expr(value);
-                *depth = self.resolve_local_depth(name)
+                *depth = self.resolve_local_depth(&name.lexeme)
             }
             Expr::Litral(_) => {}
             Expr::Unary { operator: _, right } => {
@@ -236,14 +237,14 @@ impl Resolver {
         self.current_function = enclosing_function;
     }
 
-    fn resolve_local_depth(&self, name: &Token) -> Option<usize> {
+    fn resolve_local_depth(&self, name: &str) -> Option<usize> {
         let result = self
             .scopes
             .iter()
             .rev()
             .enumerate()
             .try_for_each(|(i, scope)| {
-                if scope.contains_key(&name.lexeme) {
+                if scope.contains_key(name) {
                     Err(i)
                 } else {
                     Ok(())

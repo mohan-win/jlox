@@ -3,14 +3,35 @@ use crate::{
     ast::{Fun, LitralValue, Stmt},
     token::{Token, TokenType},
 };
-use std::error::Error;
 use std::fmt;
+use std::{error::Error, fmt::Display};
 
-/// ToDo:: refractor using parser combinators
+struct ClassContext {
+    class_name: Token,
+    method_name: Token,
+}
+
+#[derive(Debug)]
+enum FunctionKind {
+    Funtion,
+    Method { class_name: Token },
+}
+
+impl<'a> Display for FunctionKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FunctionKind::Funtion => write!(f, "Function"),
+            FunctionKind::Method { class_name } => write!(f, "Method of class {}", class_name),
+        }
+    }
+}
+
+/// ToDo:: refractor using parser combinators?
 pub struct Parser<'a> {
     tokens: &'a Vec<Token>,
     current: usize,
     num_of_parser_errs: usize,
+    current_class: Option<ClassContext>,
 }
 
 impl<'a> Parser<'a> {
@@ -19,6 +40,7 @@ impl<'a> Parser<'a> {
             tokens,
             current: 0,
             num_of_parser_errs: 0,
+            current_class: None,
         }
     }
 
@@ -96,7 +118,7 @@ impl<'a> Parser<'a> {
         let stmt = if self.matches(&[TokenType::CLASS]) {
             self.class_declaration()
         } else if self.matches(&[TokenType::FUN]) {
-            self.function("function")
+            self.function(FunctionKind::Funtion)
         } else if self.matches(&[TokenType::VAR]) {
             self.var_declaration()
         } else {
@@ -128,7 +150,9 @@ impl<'a> Parser<'a> {
         self.consume(&TokenType::LEFT_BRACE, "Expect '{' after the class name")?;
         let mut methods = Vec::new();
         while !self.check(&TokenType::RIGHT_BRACE) && !self.is_at_end() {
-            if let Stmt::Function(fun) = self.function("method")? {
+            if let Stmt::Function(fun) = self.function(FunctionKind::Method {
+                class_name: name.clone(),
+            })? {
                 methods.push(fun)
             }
         }
@@ -141,7 +165,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn function(&mut self, kind: &str) -> ParserResult<Stmt> {
+    fn function(&mut self, kind: FunctionKind) -> ParserResult<Stmt> {
         let name = self
             .consume(
                 &TokenType::IDENTIFIER,
@@ -179,8 +203,16 @@ impl<'a> Parser<'a> {
             &TokenType::LEFT_BRACE,
             format!("Expect '{{' before start of a {} body", kind).as_str(),
         )?;
-        let body = self.block()?;
-        Ok(Stmt::Function(Fun { name, params, body }))
+        if let FunctionKind::Method { class_name } = kind {
+            self.current_class = Some(ClassContext {
+                class_name,
+                method_name: name.clone(),
+            })
+        }
+        let body = self.block();
+        self.current_class = None; // Important: Reset current_class context
+
+        body.map(|body| Stmt::Function(Fun { name, params, body }))
     }
 
     fn var_declaration(&mut self) -> ParserResult<Stmt> {
@@ -530,15 +562,27 @@ impl<'a> Parser<'a> {
                 keyword: self.peek().clone(),
                 depth: None,
             }),
-            INNER => Some(Expr::Inner {
-                keyword: self.peek().clone(),
-                depth: None,
-            }),
             _ => None,
         };
         if let Some(e) = expr {
             self.advance(); // Important: comsume token & advance
             Ok(Box::new(e))
+        } else if let INNER = self.peek().token_type {
+            self.advance();
+            let keyword = self.previous().clone();
+            if let Some(class_context) = &self.current_class {
+                Ok(Box::new(Expr::Inner {
+                    keyword,
+                    this_depth: None,
+                    class: class_context.class_name.clone(),
+                    method: class_context.method_name.clone(),
+                }))
+            } else {
+                Err(ParserError::new(
+                    &keyword,
+                    "Unable to use inner outside class context",
+                ))
+            }
         } else if let LEFT_PARAN = self.peek().token_type {
             self.advance(); // Important: comsume token & advance
             let expr = self.expression()?;

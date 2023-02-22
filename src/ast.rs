@@ -22,7 +22,9 @@ pub enum Expr {
     },
     Inner {
         keyword: Token,
-        depth: Option<usize>,
+        this_depth: Option<usize>,
+        class: Token,
+        method: Token,
     },
     Unary {
         operator: Token,

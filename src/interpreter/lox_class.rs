@@ -30,6 +30,8 @@ impl LoxClassDefinition {
             methods,
         }
     }
+
+    /// Finds a given method with `method_name` in the inheritance hierarchy starting from base.
     pub fn find_method(&self, method_name: &str) -> Option<Rc<LoxFunction>> {
         let mut method = None;
         if let Some(super_class) = self.super_class.as_ref() {
@@ -41,6 +43,44 @@ impl LoxClassDefinition {
                 .map(|method| Rc::clone(method));
         }
         method
+    }
+
+    /// Finds the nearest inner method of the given class.
+    /// # Arguments
+    /// * `class_name` - Name of the class
+    /// * `method_name` - Name of the method
+    pub fn find_inner_method(
+        &self,
+        class_name: &str,
+        method_name: &str,
+    ) -> Option<Rc<LoxFunction>> {
+        let mut current_class = self;
+        if self.name == class_name {
+            None // Note: Inner method of the current class, is `None`
+        } else {
+            let mut sub_classes = Vec::new();
+            loop {
+                if let Some(super_class) = current_class.super_class.as_ref() {
+                    sub_classes.push(current_class);
+                    current_class = super_class.0.as_ref();
+                    if current_class.name == class_name {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+
+            let inner_method = sub_classes.into_iter().rev().try_for_each(|sub_class| {
+                if let Some(method) = sub_class.methods.get(method_name) {
+                    Err(Rc::clone(method))
+                } else {
+                    Ok(())
+                }
+            });
+
+            inner_method.map_or_else(|inner_method| Some(inner_method), |_| None)
+        }
     }
 }
 
@@ -63,6 +103,13 @@ impl LoxClass {
     }
     pub fn find_method(&self, method_name: &str) -> Option<Rc<LoxFunction>> {
         self.0.find_method(method_name)
+    }
+    pub fn find_inner_method(
+        &self,
+        class_name: &str,
+        method_name: &str,
+    ) -> Option<Rc<LoxFunction>> {
+        self.0.find_inner_method(class_name, method_name)
     }
 }
 
@@ -131,6 +178,14 @@ impl LoxInstance for ClassInstance {
                     None
                 }
             })
+    }
+    fn get_inner(&self, class: &Token, method: &Token) -> Option<RuntimeValue> {
+        self.0
+            .as_ref()
+            .borrow()
+            .kclass
+            .find_inner_method(&class.lexeme, &method.lexeme)
+            .map(|method| RuntimeValue::Callable(Rc::new(method.bind(self))))
     }
 
     fn set(&self, name: &Token, value: RuntimeValue) -> RuntimeValue {
